@@ -19,13 +19,16 @@ from typing import Any, List, Tuple
 
 from serialization import jsonpickle
 
+from petrelic.multiplicative.pairing import G1, G2, GT
+from credential_utils import *
 
 # Type hint aliases
 # Feel free to change them as you see fit.
 # Maybe at the end, you will not need aliases at all!
-SecretKey = Any
-PublicKey = Any
-Signature = Any
+
+# SecretKey = Any
+# PublicKey = Any
+# Signature = Any
 Attribute = Any
 AttributeMap = Any
 IssueRequest = Any
@@ -43,7 +46,28 @@ def generate_key(
         attributes: List[Attribute]
     ) -> Tuple[SecretKey, PublicKey]:
     """ Generate signer key pair """
-    raise NotImplementedError()
+
+    # length of the message vector
+    L = len(attributes)
+
+    # pick x and y from integers modulo p (the group order)
+    x = G1.order().random()
+    y = [G1.order().random() for _ in range(L)]
+
+    # pick random generators g for G1 and g_tilde for G2 (not random here)
+    g = G1.generator()
+    g_tilde = G2.generator()
+
+    # compute X, X_tilde
+    X = g ** x
+    X_tilde = g_tilde ** x
+
+    # compute Y, Y_tilde
+    Y = [g ** y_i for y_i in y]
+    Y_tilde = [g_tilde ** y_i for y_i in y]
+
+    # return the secret and public key
+    return SecretKey(x, X, y), PublicKey(g, Y, g_tilde, X_tilde, Y_tilde)
 
 
 def sign(
@@ -51,7 +75,27 @@ def sign(
         msgs: List[bytes]
     ) -> Signature:
     """ Sign the vector of messages `msgs` """
-    raise NotImplementedError()
+
+    # check that the length of the message vector is not zero
+    if len(msgs) == 0:
+        raise ValueError("The length of the message vector is zero")
+
+    # check that the length of the message vector is L
+    if len(msgs) != len(sk.y):
+        raise ValueError("The length of the message vector is not L")
+    
+    # map msgs to WHAT? 
+    # m = [G1.hash_to_point(msg) for msg in msgs] doesn't work
+    m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
+
+    # pick random generator h for G1 (not random here)
+    h = G1.generator()
+
+    # compute exponent 
+    # if h is G1.generator() then this can be done more efficiently with wprod()
+    exp = sk.x + sum([sk.y[i] * m[i] for i in range(len(m))])
+
+    return Signature(h, h ** exp)
 
 
 def verify(
@@ -60,7 +104,26 @@ def verify(
         msgs: List[bytes]
     ) -> bool:
     """ Verify the signature on a vector of messages """
-    raise NotImplementedError()
+
+    # check that the length of the message vector is not zero
+    if len(msgs) == 0:
+        raise ValueError("The length of the message vector is zero")
+
+    # check that the length of the message vector is L
+    if len(msgs) != len(pk.Y):
+        raise ValueError("The length of the message vector is not L")
+
+    # map msgs to WHAT? 
+    # m = [G1.hash_to_point(msg) for msg in msgs] doesn't work
+    m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
+
+    # compute product X_tilde * Y_tilde[0]^m[0] * ... * Y_tilde[L-1]^m[L-1]
+    product = pk.X_tilde
+    for i in range(len(m)):
+        product *= pk.Y_tilde[i] ** m[i]
+    
+    return signature.sigma_1 != G1.unity and signature.sigma_1.pair(product) == signature.sigma_2.pair(pk.g_tilde)
+
 
 
 #################################
@@ -79,6 +142,14 @@ def create_issue_request(
 
     *Warning:* You may need to pass state to the `obtain_credential` function.
     """
+    # pick random t from integers modulo p
+    t = G1.order().random()
+
+    # compute commitment
+    commitment = pk.g ** t
+    for i in user_attributes.keys: # TODO: how does the AttributeMap look like?
+        commitment *= pk.Y[i] ** user_attributes[i]
+    
     raise NotImplementedError()
 
 
