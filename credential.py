@@ -20,6 +20,7 @@ from typing import Any, List, Tuple
 from serialization import jsonpickle
 
 from petrelic.multiplicative.pairing import G1, G2, GT
+from petrelic.bn import Bn
 from credential_utils import *
 
 # Type hint aliases
@@ -30,9 +31,9 @@ from credential_utils import *
 # PublicKey = Any
 # Signature = Any
 Attribute = Any
-AttributeMap = Any
-IssueRequest = Any
-BlindSignature = Any
+# AttributeMap = Any
+# IssueRequest = Any
+# BlindSignature = Any
 AnonymousCredential = Any
 DisclosureProof = Any
 
@@ -84,7 +85,7 @@ def sign(
     if len(msgs) != len(sk.y):
         raise ValueError("The length of the message vector is not L")
     
-    # map msgs to WHAT? 
+    # map msgs to Z_p 
     # m = [G1.hash_to_point(msg) for msg in msgs] doesn't work
     m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
 
@@ -113,7 +114,7 @@ def verify(
     if len(msgs) != len(pk.Y):
         raise ValueError("The length of the message vector is not L")
 
-    # map msgs to WHAT? 
+    # map msgs to Z_p 
     # m = [G1.hash_to_point(msg) for msg in msgs] doesn't work
     m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
 
@@ -135,7 +136,7 @@ def verify(
 def create_issue_request(
         pk: PublicKey,
         user_attributes: AttributeMap
-    ) -> IssueRequest:
+    ) -> Tuple[IssueRequest, Bn]:
     """ Create an issuance request
 
     This corresponds to the "user commitment" step in the issuance protocol.
@@ -146,11 +147,14 @@ def create_issue_request(
     t = G1.order().random()
 
     # compute commitment
-    commitment = pk.g ** t
-    for i in user_attributes.keys: # TODO: how does the AttributeMap look like?
-        commitment *= pk.Y[i] ** user_attributes[i]
-    
-    raise NotImplementedError()
+    C = pk.g ** t
+    for (i, attr) in user_attributes.get_attributes():
+        C *= pk.Y[i] ** bytes_to_Z_p(attr, G1.order())
+
+    # TODO: compute a non-interactive proof pi
+    pi = ...   
+
+    return IssueRequest(C, pi), t
 
 
 def sign_issue_request(
@@ -163,18 +167,31 @@ def sign_issue_request(
 
     This corresponds to the "Issuer signing" step in the issuance protocol.
     """
-    raise NotImplementedError()
+
+    # TODO: verify the validity of the proof pi with respect to the commitment C and abort if invalid
+
+    # pick random u from integers modulo p
+    u = G1.order().random()
+
+    # compute product X * C * Y[i]^attr[i] for all i in I
+    product = sk.X * request.C
+    for (i, attr) in issuer_attributes.get_attributes():
+        product *= pk.Y[i] ** bytes_to_Z_p(attr, G1.order())
+
+    return BlindSignature(pk.g ** u, product ** u)
+
 
 
 def obtain_credential(
         pk: PublicKey,
-        response: BlindSignature
-    ) -> AnonymousCredential:
+        response: BlindSignature,
+        t: Bn
+    ) -> Signature:
     """ Derive a credential from the issuer's response
 
     This corresponds to the "Unblinding signature" step.
     """
-    raise NotImplementedError()
+    return Signature(response.sigma_1_prime, response.sigma_2_prime / (response.sigma_1_prime ** t))
 
 
 ## SHOWING PROTOCOL ##
