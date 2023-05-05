@@ -90,9 +90,10 @@ def sign(
     m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
 
     # pick random generator h for G1 (not random here)
-    h = G1.generator()
+    # h must not be identity element
+    h = G1_no_identity()
 
-    # compute exponent 
+    # compute exponent
     # if h is G1.generator() then this can be done more efficiently with wprod()
     exp = sk.x + sum([sk.y[i] * m[i] for i in range(len(m))])
 

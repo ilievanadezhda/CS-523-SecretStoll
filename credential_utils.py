@@ -1,5 +1,9 @@
-from typing import Any
 import hashlib
+from typing import List
+
+from petrelic.bn import Bn
+from petrelic.multiplicative.pairing import G1
+
 
 class PublicKey:
     """ Public key of the signer/issuer"""
@@ -35,7 +39,7 @@ class AttributeMap:
         return self.map[key]
 
     def set_attribute(self, key, value):
-        if key >= 0 and key < self.L:
+        if 0 <= key < self.L:
             self.map[key] = value
         else:
             raise ValueError("Attribute index out of range")
@@ -60,4 +64,53 @@ class BlindSignature:
 
 def bytes_to_Z_p(m, p):
     """ Convert bytes to Z_p """
-    return int.from_bytes(hashlib.sha256(m).digest(), byteorder="big") % p
+    # return int.from_bytes(hashlib.sha256(m).digest(), byteorder="big") % p
+    # todo: check
+    return Bn.from_binary(hashlib.sha256(m).digest()).int() % p
+
+
+def G1_no_identity():
+    element = G1.generator()
+    while element == G1.unity:
+        element = G1.generator()
+    return element
+
+
+def pedersen_commitment(secrets: List[int]):
+    p = G1.order()
+    l = len(secrets)
+
+    generators = [G1.generator() for _ in secrets]
+    randoms = [G1.order().random() for _ in secrets]
+
+    com = generators[0] ** secrets[0]
+    R = generators[0] ** randoms[0]
+    for gen_i in range(1, l):
+        com *= generators[gen_i] ** secrets[gen_i]
+        R *= generators[gen_i] ** randoms[gen_i]
+
+    challenge = hashlib.sha256()
+    for generator in generators:
+        challenge.update(generator.to_binary())
+    challenge.update(R.to_binary())
+
+    c = Bn.from_binary(challenge.digest()).int()
+
+    responses = [(randoms[i] - c * secrets[i]) % p for i in range(l)]
+
+    return generators, com, c, responses
+
+
+def check_commitment(generators, com, c, responses):
+    l = len(generators)
+    R = com ** c
+    for i in range(l):
+        R *= generators[i] ** responses[i]
+
+    new_challenge = hashlib.sha256()
+    for generator in generators:
+        new_challenge.update(generator.to_binary())
+    new_challenge.update(R.to_binary())
+    c1 = Bn.from_binary(new_challenge.digest()).int()
+
+    return c == c1

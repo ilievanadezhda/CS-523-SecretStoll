@@ -25,6 +25,7 @@ def test_scheme_3():
     signature = sign(sk, message_vec_1)
     assert verify(pk, signature, message_vec_2)
 
+
 @pytest.mark.xfail(raises=ValueError)
 def test_scheme_4():
     message_vec = []
@@ -74,3 +75,6 @@ def test_issuance_2():
     assert verify(pk, signature, attributes)
 
 
+def test_pedersen_proof():
+    g, com, c, s = pedersen_commitment([3, 3])
+    assert check_commitment(g, com, c, s)
