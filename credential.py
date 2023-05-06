@@ -14,28 +14,13 @@ We also avoided the use of classes in this template so that the code more closel
 resembles the original scheme definition. However, you are free to restructure
 the functions provided to resemble a more object-oriented interface.
 """
+from typing import Any
 
-from typing import Any, List, Tuple
-
-from serialization import jsonpickle
-
-from petrelic.multiplicative.pairing import G1, G2, GT
 from petrelic.bn import Bn
+from petrelic.multiplicative.pairing import G1, G2
+
 from credential_utils import *
-
-# Type hint aliases
-# Feel free to change them as you see fit.
-# Maybe at the end, you will not need aliases at all!
-
-# SecretKey = Any
-# PublicKey = Any
-# Signature = Any
-Attribute = Any
-# AttributeMap = Any
-# IssueRequest = Any
-# BlindSignature = Any
-AnonymousCredential = Any
-DisclosureProof = Any
+from zkp_utils import *
 
 
 ######################
@@ -44,9 +29,12 @@ DisclosureProof = Any
 
 
 def generate_key(
-        attributes: List[Attribute]
+        attributes: List[Any]
     ) -> Tuple[SecretKey, PublicKey]:
     """ Generate signer key pair """
+
+    if len(attributes) == 0:
+        raise ValueError("The length of the attribute vector is zero")
 
     # length of the message vector
     L = len(attributes)
@@ -129,7 +117,6 @@ def verify(
     return signature.sigma_1 != G1.unity() and signature.sigma_1.pair(product) == signature.sigma_2.pair(pk.g_tilde)
 
 
-
 #################################
 ## ATTRIBUTE-BASED CREDENTIALS ##
 #################################
@@ -151,13 +138,22 @@ def create_issue_request(
 
     # compute commitment
     C = pk.g ** t
+    generators = [pk.g]
+    prover_inputs = [t]
     for (i, attr) in user_attributes.get_attributes():
-        C *= pk.Y[i] ** bytes_to_Z_p(attr)
+        prover_input = bytes_to_Z_p(attr)
+        generator = pk.Y[i]
+        C *= generator ** prover_input
 
-    # TODO: compute a non-interactive proof pi
-    pi = ...   
+        generators.append(generator)
+        prover_inputs.append(prover_input)
 
-    return IssueRequest(C, pi), t
+    # compute a non-interactive proof pi
+    randoms, R = get_zkp_commitment(generators)
+    c = get_zkp_challenge(generators, C, R)
+    response = get_zkp_response(randoms, c, prover_inputs)
+
+    return IssueRequest(C, Pi(R, C, c, generators, response)), t
 
 
 def sign_issue_request(
@@ -165,13 +161,17 @@ def sign_issue_request(
         pk: PublicKey,
         request: IssueRequest,
         issuer_attributes: AttributeMap
-    ) -> BlindSignature:
+) -> BlindSignature:
     """ Create a signature corresponding to the user's request
 
     This corresponds to the "Issuer signing" step in the issuance protocol.
     """
 
-    # TODO: verify the validity of the proof pi with respect to the commitment C and abort if invalid
+    # verify the validity of the proof pi with respect to the commitment C and abort if invalid
+    pi = request.pi
+    proof_verification = verify_zkp(pi.R, pi.commitment, pi.challenge, pi.generators, pi.response)
+    if not proof_verification:
+        raise AssertionError()
 
     # pick random u from integers modulo p
     u = G1.order().random()
@@ -182,7 +182,6 @@ def sign_issue_request(
         product *= pk.Y[i] ** bytes_to_Z_p(attr)
 
     return BlindSignature(pk.g ** u, product ** u)
-
 
 
 def obtain_credential(
@@ -206,16 +205,32 @@ def create_disclosure_proof(
         message: bytes
     ) -> DisclosureProof:
     """ Create a disclosure proof """
-    raise NotImplementedError()
+    rdm_part = credential.sigma_1.pair(pk.g_tilde) ** credential.t
+    for h_id in range(len(hidden_attributes)):
+        idx = hidden_attributes[h_id].index
+        rdm_part *= credential.sigma_1.pair(pk.Y_tilde[idx]) ** bytes_to_Z_p(hidden_attributes[h_id].to_bytes())
+
+    return DisclosureProof(rdm_part, credential)
 
 
 def verify_disclosure_proof(
         pk: PublicKey,
         disclosure_proof: DisclosureProof,
-        message: bytes
+        message: bytes,
+        # todo: check how can be retrieved otherwise?
+        disclosed_attributes: List[Attribute]
     ) -> bool:
     """ Verify the disclosure proof
 
     Hint: The verifier may also want to retrieve the disclosed attributes
     """
-    raise NotImplementedError()
+    credential = disclosure_proof.credential_showed
+    denominator = credential.sigma_1.pair(pk.X_tilde)
+
+    numerator = credential.sigma_2.pair(pk.g_tilde)
+    for id in range(len(disclosed_attributes)):
+        idx = disclosed_attributes[id].index
+        numerator *= credential.sigma_1.pair(pk.Y_tilde[idx]) ** (
+                bytes_to_Z_p(disclosed_attributes[id].to_bytes()) * -1)
+
+    return numerator / denominator == disclosure_proof.proof and credential.sigma_1 != G1.unity()

@@ -1,8 +1,11 @@
-from typing import List, Tuple
 import hashlib
-from petrelic.multiplicative.pairing import G1, G1Element
+from typing import List, Tuple
+
 from petrelic.bn import Bn
+from petrelic.multiplicative.pairing import G1, G1Element
+
 from credential_utils import bytes_to_Z_p
+
 
 def get_zkp_commitment(
         generators : List[G1Element]
@@ -51,4 +54,5 @@ def verify_zkp(
         rhs = com**c
         for generator, resp in zip(generators, response):
                 rhs *= generator ** resp
-        return lhs == rhs 
+
+        return lhs == rhs and get_zkp_challenge(generators, com, rhs) == c
