@@ -4,8 +4,10 @@ Classes that you need to complete.
 
 from typing import Any, Dict, List, Union, Tuple
 
+import serialization_utils
 # Optional import
 from serialization import jsonpickle
+from credential import *
 
 # Type aliases
 State = Any
@@ -19,10 +21,8 @@ class Server:
         """
         Server constructor.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        self.secret_key = None
+        self.public_key = None
 
 
     @staticmethod
@@ -44,10 +44,10 @@ class Server:
             You are free to design this as you see fit, but the return types
             should be encoded as bytes.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        # todo: figure out attributes format
+        (sk, pk) = generate_key(subscriptions)
+        return serialization_utils.serialize(sk).encode(), serialization_utils.serialize(pk).encode()
+
 
 
     def process_registration(

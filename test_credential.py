@@ -25,6 +25,7 @@ def test_scheme_3():
     signature = sign(sk, message_vec_1)
     assert verify(pk, signature, message_vec_2)
 
+
 @pytest.mark.xfail(raises=ValueError)
 def test_scheme_4():
     message_vec = []
@@ -72,5 +73,4 @@ def test_issuance_2():
 
     attributes = [b'0', b'1', b'2', b'3', b'4']
     assert verify(pk, signature, attributes)
-
 
