@@ -74,7 +74,3 @@ def test_issuance_2():
     attributes = [b'0', b'1', b'2', b'3', b'4']
     assert verify(pk, signature, attributes)
 
-
-def test_pedersen_proof():
-    g, com, c, s = pedersen_commitment([3, 3])
-    assert check_commitment(g, com, c, s)

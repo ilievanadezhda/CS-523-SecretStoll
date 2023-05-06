@@ -1,3 +1,4 @@
+import os
 import hashlib
 from typing import List
 
@@ -62,55 +63,59 @@ class BlindSignature:
         self.sigma_1_prime = sigma_1_prime
         self.sigma_2_prime = sigma_2_prime
 
-def bytes_to_Z_p(m, p):
-    """ Convert bytes to Z_p """
-    # return int.from_bytes(hashlib.sha256(m).digest(), byteorder="big") % p
-    # todo: check
-    return Bn.from_binary(hashlib.sha256(m).digest()).int() % p
+#######################################
+## CREDENTIAL SCHEME HELPER FUNCTIONS##
+#######################################
 
+def bytes_to_Z_p(m):
+    """ Convert bytes to Z_p (the order of G1) """
+    return Bn.from_binary(hashlib.sha256(m).digest()).mod(G1.order())
 
-def G1_no_identity():
-    element = G1.generator()
-    while element == G1.unity:
-        element = G1.generator()
+def G1_random_generator():
+    """ Return a random generator/non-unity element of G1 """
+    # pick a random element from G1
+    element = G1.hash_to_point(os.urandom(32))
+    # if the element is the identity, pick another one
+    while element == G1.unity():
+        element = G1.hash_to_point(os.urandom(32))
     return element
 
 
-def pedersen_commitment(secrets: List[int]):
-    p = G1.order()
-    l = len(secrets)
+# def pedersen_commitment(secrets: List[int]):
+#     p = G1.order()
+#     l = len(secrets)
 
-    generators = [G1.generator() for _ in secrets]
-    randoms = [G1.order().random() for _ in secrets]
+#     generators = [G1.generator() for _ in secrets]
+#     randoms = [G1.order().random() for _ in secrets]
 
-    com = generators[0] ** secrets[0]
-    R = generators[0] ** randoms[0]
-    for gen_i in range(1, l):
-        com *= generators[gen_i] ** secrets[gen_i]
-        R *= generators[gen_i] ** randoms[gen_i]
+#     com = generators[0] ** secrets[0]
+#     R = generators[0] ** randoms[0]
+#     for gen_i in range(1, l):
+#         com *= generators[gen_i] ** secrets[gen_i]
+#         R *= generators[gen_i] ** randoms[gen_i]
 
-    challenge = hashlib.sha256()
-    for generator in generators:
-        challenge.update(generator.to_binary())
-    challenge.update(R.to_binary())
+#     challenge = hashlib.sha256()
+#     for generator in generators:
+#         challenge.update(generator.to_binary())
+#     challenge.update(R.to_binary())
 
-    c = Bn.from_binary(challenge.digest()).int()
+#     c = Bn.from_binary(challenge.digest()).int()
 
-    responses = [(randoms[i] - c * secrets[i]) % p for i in range(l)]
+#     responses = [(randoms[i] - c * secrets[i]) % p for i in range(l)]
 
-    return generators, com, c, responses
+#     return generators, com, c, responses
 
 
-def check_commitment(generators, com, c, responses):
-    l = len(generators)
-    R = com ** c
-    for i in range(l):
-        R *= generators[i] ** responses[i]
+# def check_commitment(generators, com, c, responses):
+#     l = len(generators)
+#     R = com ** c
+#     for i in range(l):
+#         R *= generators[i] ** responses[i]
 
-    new_challenge = hashlib.sha256()
-    for generator in generators:
-        new_challenge.update(generator.to_binary())
-    new_challenge.update(R.to_binary())
-    c1 = Bn.from_binary(new_challenge.digest()).int()
+#     new_challenge = hashlib.sha256()
+#     for generator in generators:
+#         new_challenge.update(generator.to_binary())
+#     new_challenge.update(R.to_binary())
+#     c1 = Bn.from_binary(new_challenge.digest()).int()
 
-    return c == c1
+#     return c == c1

@@ -87,11 +87,13 @@ def sign(
     
     # map msgs to Z_p 
     # m = [G1.hash_to_point(msg) for msg in msgs] doesn't work
-    m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
+    m = [bytes_to_Z_p(msg) for msg in msgs]
 
     # pick random generator h for G1 (not random here)
+    # h = G1.generator()
     # h must not be identity element
-    h = G1_no_identity()
+    # h = G1_no_identity() might not be needed as G1.generator() always returns the same generator which is never the identity element
+    h = G1_random_generator()
 
     # compute exponent
     # if h is G1.generator() then this can be done more efficiently with wprod()
@@ -117,14 +119,14 @@ def verify(
 
     # map msgs to Z_p 
     # m = [G1.hash_to_point(msg) for msg in msgs] doesn't work
-    m = [bytes_to_Z_p(msg, G1.order()) for msg in msgs]
+    m = [bytes_to_Z_p(msg) for msg in msgs]
 
     # compute product X_tilde * Y_tilde[0]^m[0] * ... * Y_tilde[L-1]^m[L-1]
     product = pk.X_tilde
     for i in range(len(m)):
         product *= pk.Y_tilde[i] ** m[i]
     
-    return signature.sigma_1 != G1.unity and signature.sigma_1.pair(product) == signature.sigma_2.pair(pk.g_tilde)
+    return signature.sigma_1 != G1.unity() and signature.sigma_1.pair(product) == signature.sigma_2.pair(pk.g_tilde)
 
 
 
@@ -150,7 +152,7 @@ def create_issue_request(
     # compute commitment
     C = pk.g ** t
     for (i, attr) in user_attributes.get_attributes():
-        C *= pk.Y[i] ** bytes_to_Z_p(attr, G1.order())
+        C *= pk.Y[i] ** bytes_to_Z_p(attr)
 
     # TODO: compute a non-interactive proof pi
     pi = ...   
@@ -177,7 +179,7 @@ def sign_issue_request(
     # compute product X * C * Y[i]^attr[i] for all i in I
     product = sk.X * request.C
     for (i, attr) in issuer_attributes.get_attributes():
-        product *= pk.Y[i] ** bytes_to_Z_p(attr, G1.order())
+        product *= pk.Y[i] ** bytes_to_Z_p(attr)
 
     return BlindSignature(pk.g ** u, product ** u)
 
