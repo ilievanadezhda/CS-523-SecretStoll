@@ -125,7 +125,7 @@ def verify(
 
 def create_issue_request(
         pk: PublicKey,
-        user_attributes: AttributeMap
+        user_attributes: List[Attribute]
     ) -> Tuple[IssueRequest, Bn]:
     """ Create an issuance request
 
@@ -136,31 +136,30 @@ def create_issue_request(
     # pick random t from integers modulo p
     t = G1.order().random()
 
-    # compute commitment
+    # compute Pedersen commitment
     C = pk.g ** t
     generators = [pk.g]
     prover_inputs = [t]
-    for (i, attr) in user_attributes.get_attributes():
-        prover_input = bytes_to_Z_p(attr)
-        generator = pk.Y[i]
+    for attr in user_attributes:
+        prover_input = bytes_to_Z_p(attr.to_bytes()) # TODO: check if it makes sense to convert the whole object to bytes or just the value?
+        generator = pk.Y[attr.index]
         C *= generator ** prover_input
 
         generators.append(generator)
         prover_inputs.append(prover_input)
 
     # compute a non-interactive proof pi
-    randoms, R = get_zkp_commitment(generators)
-    c = get_zkp_challenge(generators, C, R)
-    response = get_zkp_response(randoms, c, prover_inputs)
+    c, s = generate_zkp(generators, prover_inputs, C)
+    pi = ZKProof(generators, c, s)
 
-    return IssueRequest(C, Pi(R, C, c, generators, response)), t
+    return IssueRequest(C, pi), t
 
 
 def sign_issue_request(
         sk: SecretKey,
         pk: PublicKey,
         request: IssueRequest,
-        issuer_attributes: AttributeMap
+        issuer_attributes: List[Attribute]
 ) -> BlindSignature:
     """ Create a signature corresponding to the user's request
 
@@ -169,17 +168,16 @@ def sign_issue_request(
 
     # verify the validity of the proof pi with respect to the commitment C and abort if invalid
     pi = request.pi
-    proof_verification = verify_zkp(pi.R, pi.commitment, pi.challenge, pi.generators, pi.response)
-    if not proof_verification:
-        raise AssertionError()
+    if not verify_zkp(request.C, pi.generators, pi.c, pi.s):
+        raise ZKPVerificationError("ZKP verification failed")
 
     # pick random u from integers modulo p
     u = G1.order().random()
 
     # compute product X * C * Y[i]^attr[i] for all i in I
     product = sk.X * request.C
-    for (i, attr) in issuer_attributes.get_attributes():
-        product *= pk.Y[i] ** bytes_to_Z_p(attr)
+    for attr in issuer_attributes:
+        product *= pk.Y[attr.index] ** bytes_to_Z_p(attr.to_bytes())
 
     return BlindSignature(pk.g ** u, product ** u)
 
@@ -193,7 +191,7 @@ def obtain_credential(
 
     This corresponds to the "Unblinding signature" step.
     """
-    return Signature(response.sigma_1_prime, response.sigma_2_prime / (response.sigma_1_prime ** t))
+    return Signature(response.sigma_1, response.sigma_2 / (response.sigma_1 ** t))
 
 
 ## SHOWING PROTOCOL ##
@@ -205,32 +203,54 @@ def create_disclosure_proof(
         message: bytes
     ) -> DisclosureProof:
     """ Create a disclosure proof """
-    rdm_part = credential.sigma_1.pair(pk.g_tilde) ** credential.t
-    for h_id in range(len(hidden_attributes)):
-        idx = hidden_attributes[h_id].index
-        rdm_part *= credential.sigma_1.pair(pk.Y_tilde[idx]) ** bytes_to_Z_p(hidden_attributes[h_id].to_bytes())
 
-    return DisclosureProof(rdm_part, credential)
+    # compute Pedersen commitment (RHS)
+    C = credential.sigma_1.pair(pk.g_tilde) ** credential.t
+    generators = [credential.sigma_1.pair(pk.g_tilde)]
+    prover_inputs = [credential.t]
+
+    for hidden_attr in hidden_attributes:
+        idx = hidden_attr.index
+        generator = credential.sigma_1.pair(pk.Y_tilde[idx])
+        prover_input = bytes_to_Z_p(hidden_attr.to_bytes())
+        C *= generator ** prover_input
+
+        generators.append(generator)
+        prover_inputs.append(prover_input)
+    
+    # compute a non-interactive proof pi
+    c, s = generate_zkp(generators, prover_inputs, C)
+    pi = ZKProof(generators, c, s)
+
+    return DisclosureProof(pi, credential)
 
 
 def verify_disclosure_proof(
         pk: PublicKey,
         disclosure_proof: DisclosureProof,
         message: bytes,
-        # todo: check how can be retrieved otherwise?
+        # TODO: check how can be retrieved otherwise? I think it is okay like this.
         disclosed_attributes: List[Attribute]
     ) -> bool:
     """ Verify the disclosure proof
 
     Hint: The verifier may also want to retrieve the disclosed attributes
     """
+    # disclosure proof
     credential = disclosure_proof.credential_showed
-    denominator = credential.sigma_1.pair(pk.X_tilde)
+    pi = disclosure_proof.pi
 
+    # compute Pedersen commitment (LHS)
+    # the user does not send the Pedersen commitment, the verifier can compute it from the disclosed attributes
+    # numerator
     numerator = credential.sigma_2.pair(pk.g_tilde)
-    for id in range(len(disclosed_attributes)):
-        idx = disclosed_attributes[id].index
-        numerator *= credential.sigma_1.pair(pk.Y_tilde[idx]) ** (
-                bytes_to_Z_p(disclosed_attributes[id].to_bytes()) * -1)
+    for disclosed_attr in disclosed_attributes:
+        idx = disclosed_attr.index
+        numerator *= credential.sigma_1.pair(pk.Y_tilde[idx]) ** (bytes_to_Z_p(disclosed_attr.to_bytes()).int_neg())
+    # denominator
+    denominator = credential.sigma_1.pair(pk.X_tilde)
+    # Pedersen commitment
+    C = numerator / denominator
 
-    return numerator / denominator == disclosure_proof.proof and credential.sigma_1 != G1.unity()
+    # verify ZKP
+    return credential.sigma_1 != G1.unity() and verify_zkp(C, pi.generators, pi.c, pi.s)

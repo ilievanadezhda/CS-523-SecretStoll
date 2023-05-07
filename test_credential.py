@@ -63,43 +63,17 @@ def test_success_issuance():
     L = 5
     sk, pk = generate_key([b"0"] * L)
 
-    user_attributes = AttributeMap(L)
-    user_attributes.set_attribute(0, b'0')
-    user_attributes.set_attribute(1, b'1')
-    user_attributes.set_attribute(2, b'2')
-
-    issuer_attributes = AttributeMap(L)
-    issuer_attributes.set_attribute(3, b'3')
-    issuer_attributes.set_attribute(4, b'4')
+    user_attributes = [Attribute(0, "key0", b'0'), Attribute(1, "key1", b'1'), Attribute(2, "key2", b'2')]
+    issuer_attributes = [Attribute(3, "key3", b'3'), Attribute(4, "key4", b'4')]
 
     issue_request, t = create_issue_request(pk, user_attributes)
     blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
     signature = obtain_credential(pk, blind_signature, t)
 
-    attributes = [b'0', b'1', b'2', b'3', b'4']
+    user_attributes_bytes = [attr.to_bytes() for attr in user_attributes]
+    issuer_attributes_bytes = [attr.to_bytes() for attr in issuer_attributes]
+    attributes = user_attributes_bytes + issuer_attributes_bytes
     assert verify(pk, signature, attributes)
-
-
-@pytest.mark.xfail(raises=AssertionError)
-def test_failure_issuance_wrong_proof():
-    L = 5
-    sk, pk = generate_key([b"0"] * L)
-
-    user_attributes = AttributeMap(L)
-    user_attributes.set_attribute(0, b'0')
-    user_attributes.set_attribute(1, b'1')
-    user_attributes.set_attribute(2, b'2')
-
-    issuer_attributes = AttributeMap(L)
-    issuer_attributes.set_attribute(3, b'3')
-    issuer_attributes.set_attribute(4, b'4')
-
-    issue_request, t = create_issue_request(pk, user_attributes)
-    # change pi
-    issue_request.pi.generators.append(G1.generator() ** G1.order().random())
-    issue_request.pi.response.append(G1.order().random())
-
-    sign_issue_request(sk, pk, issue_request, issuer_attributes)
 
 
 @pytest.mark.xfail(raises=AssertionError)
@@ -107,18 +81,31 @@ def test_failure_issuance_wrong_attr():
     L = 5
     sk, pk = generate_key([b"0"] * L)
 
-    user_attributes = AttributeMap(L)
-    user_attributes.set_attribute(0, b'hello')
-    user_attributes.set_attribute(1, b'1')
-    user_attributes.set_attribute(2, b'2')
-
-    issuer_attributes = AttributeMap(L)
-    issuer_attributes.set_attribute(3, b'3')
-    issuer_attributes.set_attribute(4, b'4')
+    user_attributes = [Attribute(0, "key0", b'0'), Attribute(1, "key1", b'1'), Attribute(2, "key2", b'2')]
+    issuer_attributes = [Attribute(3, "key3", b'3'), Attribute(4, "key4", b'4')]
 
     issue_request, t = create_issue_request(pk, user_attributes)
     blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
     signature = obtain_credential(pk, blind_signature, t)
 
-    attributes = [b'0', b'1', b'2', b'3', b'4']
+    user_attributes = [Attribute(0, "key0", b'hello'), Attribute(1, "key1", b'1'), Attribute(2, "key2", b'2')]
+    user_attributes_bytes = [attr.to_bytes() for attr in user_attributes]
+    issuer_attributes_bytes = [attr.to_bytes() for attr in issuer_attributes]
+    attributes = user_attributes_bytes + issuer_attributes_bytes
     assert verify(pk, signature, attributes)
+
+
+@pytest.mark.xfail(raises=ZKPVerificationError)
+def test_failure_issuance_wrong_proof():
+    L = 5
+    sk, pk = generate_key([b"0"] * L)
+
+    user_attributes = [Attribute(0, "key0", b'0'), Attribute(1, "key1", b'1'), Attribute(2, "key2", b'2')]
+    issuer_attributes = [Attribute(3, "key3", b'3'), Attribute(4, "key4", b'4')]
+
+    issue_request, t = create_issue_request(pk, user_attributes)
+    # change pi
+    issue_request.pi.generators.append(G1.generator() ** G1.order().random())
+    issue_request.pi.s.append(G1.order().random())
+
+    sign_issue_request(sk, pk, issue_request, issuer_attributes)
