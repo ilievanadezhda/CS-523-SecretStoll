@@ -1,4 +1,4 @@
-import jsonpickle
+from serialization import jsonpickle
 
 
 def serialize(obj):

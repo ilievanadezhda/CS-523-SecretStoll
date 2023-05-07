@@ -73,14 +73,18 @@ def get_zkp_commitment(
 def get_zkp_challenge(
         generators : List[Any],
         com : Bn,
-        R : Any
+        R : Any,
+        message: bytes = None
         ) -> Bn:
         """ Generate a non-interactive challenge according to the Fiat-Shamir heuristic """
+        """ Optional message in case of signature """
         c = hashlib.sha256()
         for generator in generators:
                 c.update(generator.to_binary())
         c.update(com.to_binary())
         c.update(R.to_binary())
+        if message != None:
+            c.update(message)
         return bytes_to_Z_p(c.digest())
 
 def get_zkp_response(
@@ -95,13 +99,14 @@ def get_zkp_response(
 def generate_zkp(
         generators: List[Any],
         prover_input: List[Bn],
-        com: Any
+        com: Any,
+        message: bytes = None
         ) -> Tuple[Bn, List[Bn]]:
         """ Generate a zero-knowledge proof """
         # generate ZKP commitment
         randoms, R = get_zkp_commitment(generators)
         # generate ZKP challenge
-        c = get_zkp_challenge(generators, com, R)
+        c = get_zkp_challenge(generators, com, R) if message == None else get_zkp_challenge(generators, com, R, message)
         # generate ZKP response
         s = get_zkp_response(randoms, c, prover_input)
         return c, s
@@ -111,7 +116,8 @@ def verify_zkp(
         com: Any,
         generators: List[Any],
         c: Bn,
-        s: List[Bn]
+        s: List[Bn],
+        message: bytes = None
         ) -> bool:
         """ Verify a zero-knowledge proof """
         # generate R'
@@ -119,7 +125,7 @@ def verify_zkp(
         for generator, resp in zip(generators, s):
                 R_prime *= generator ** resp
         # generate c'
-        c_prime = get_zkp_challenge(generators, com, R_prime)
+        c_prime = get_zkp_challenge(generators, com, R_prime) if message == None else get_zkp_challenge(generators, com, R_prime, message)
         # accept if and only if c == c'
         return c == c_prime
 

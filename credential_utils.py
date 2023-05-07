@@ -1,9 +1,8 @@
 import hashlib
 import os
-from typing import List, Any
-
 from petrelic.bn import Bn
 from petrelic.multiplicative.pairing import G1
+from typing import List, Any
 
 
 class Attribute:
@@ -20,12 +19,13 @@ class Attribute:
 
 class PublicKey:
     """ Public key of the signer/issuer"""
-    def __init__(self, g, Y, g_tilde, X_tilde, Y_tilde):
+    def __init__(self, g, Y, g_tilde, X_tilde, Y_tilde, attr_indices_dict: dict[str, int]):
         self.g = g
         self.Y = Y
         self.g_tilde = g_tilde
         self.X_tilde = X_tilde
         self.Y_tilde = Y_tilde
+        self.attr_indices_dict = attr_indices_dict
 
 class SecretKey:
     """ Secret key of the signer/issuer"""
@@ -72,6 +72,11 @@ class DisclosureProof:
         self.pi = pi
         self.credential_showed = credential_showed
 
+class State:
+    """ Used in the client to store state between prepare_registration
+    and process_registration_response """
+    def __init__(self, t: Bn):
+        self.t = t
 
 #######################################
 ## CREDENTIAL SCHEME HELPER FUNCTIONS##

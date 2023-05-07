@@ -29,7 +29,7 @@ from zkp_utils import *
 
 
 def generate_key(
-        attributes: List[Any]
+        attributes: List[str]
     ) -> Tuple[SecretKey, PublicKey]:
     """ Generate signer key pair """
 
@@ -54,9 +54,11 @@ def generate_key(
     # compute Y, Y_tilde
     Y = [g ** y_i for y_i in y]
     Y_tilde = [g_tilde ** y_i for y_i in y]
+    
+    attr_idx_dict = {attributes[i]: i for i in range(L)}
 
     # return the secret and public key
-    return SecretKey(x, X, y), PublicKey(g, Y, g_tilde, X_tilde, Y_tilde)
+    return SecretKey(x, X, y), PublicKey(g, Y, g_tilde, X_tilde, Y_tilde, attr_idx_dict)
 
 
 def sign(
@@ -219,7 +221,7 @@ def create_disclosure_proof(
         prover_inputs.append(prover_input)
     
     # compute a non-interactive proof pi
-    c, s = generate_zkp(generators, prover_inputs, C)
+    c, s = generate_zkp(generators, prover_inputs, C, message)
     pi = ZKProof(generators, c, s)
 
     return DisclosureProof(pi, credential)
@@ -253,4 +255,4 @@ def verify_disclosure_proof(
     C = numerator / denominator
 
     # verify ZKP
-    return credential.sigma_1 != G1.unity() and verify_zkp(C, pi.generators, pi.c, pi.s)
+    return credential.sigma_1 != G1.unity() and verify_zkp(C, pi.generators, pi.c, pi.s, message)

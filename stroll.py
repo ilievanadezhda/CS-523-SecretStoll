@@ -4,10 +4,10 @@ Classes that you need to complete.
 
 from typing import Any, Dict, List, Union, Tuple
 
-import serialization_utils
+from serialization_utils import *
 # Optional import
-from serialization import jsonpickle
 from credential import *
+from stroll_utils import *
 
 # Type aliases
 State = Any
@@ -44,9 +44,11 @@ class Server:
             You are free to design this as you see fit, but the return types
             should be encoded as bytes.
         """
-        # todo: figure out attributes format
+        """Should be called with all possible subscriptions + secret_key attribute
+        key, since username is already added in server.py """
         (sk, pk) = generate_key(subscriptions)
-        return serialization_utils.serialize(sk).encode(), serialization_utils.serialize(pk).encode()
+        # todo: check whether .encode() is needed here
+        return serialize(sk), serialize(pk)
 
 
 
@@ -71,10 +73,30 @@ class Server:
             serialized response (the client should be able to build a
                 credential with this response).
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        
+        """ Assuming user hides (part of commitment - the private key
+        and the username) and subscriptions are the requested subscriptions,
+        part of issuer-defined attributes in this case.
+        Server (issuer) adds all attributes for all remaining possible
+        subscriptions, with value equal to false.
+        We are not using the username here, as we do not want to reveal it
+        at any moment.
+        """
+        sk: SecretKey = deserialize(server_sk)
+        pk: PublicKey = deserialize(server_pk)
+        issue_req: IssueRequest = deserialize(issuance_request)
+        
+        # add subscribed attributes first
+        issuer_attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in subscriptions]
+        
+        # append attributes for all remaining subscriptions
+        all_attr_keys = get_all_attribute_keys(pk)
+        missing_subs_keys = list(filter(lambda x: x not in subscriptions and x not in [ATTR_SECRET_KEY, ATTR_USERNAME],
+                                        all_attr_keys))
+        
+        issuer_attributes.extend([Attribute(pk.attr_indices_dict[attr_key], attr_key, "false") for attr_key in missing_subs_keys])
+        
+        return serialize(sign_issue_request(sk, pk, issue_req, issuer_attributes))
 
 
     def check_request_signature(
@@ -95,23 +117,30 @@ class Server:
         Returns:
             whether a signature is valid
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        
+        """ Assuming user only reveals subset of subscriptions
+        for which requests service - the server checks if the
+        corresponding values are equal to 'true'
+        
+        Assuming signature is the DisclosureProof model
+        """
+        pk: PublicKey = deserialize(server_pk)
+        disclosure: DisclosureProof = deserialize(signature)
+        attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in revealed_attributes]
+        
+        return verify_disclosure_proof(pk, disclosure, message, attributes)
 
 
 class Client:
     """Client"""
 
-    def __init__(self):
+    def __init__(self, secret_key: str, username: str):
         """
         Client constructor.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError()
+        self.secret_key = secret_key
+        self.username = username
+        self.subscriptions = []
 
 
     def prepare_registration(
@@ -134,10 +163,18 @@ class Client:
                 from prepare_registration to proceed_registration_response.
                 You need to design the state yourself.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        
+        """ User commits to the secret key and the username only;
+        and sends requested subscriptions - based on these the server will know
+        how to populate the values for all possible subscriptions as issuer-defined
+        attributes """
+        self.subscriptions = subscriptions
+        
+        pk: PublicKey = deserialize(server_pk)
+        comm_attributes = self.get_sk_username_attributes(pk)
+        
+        issue_request, t = create_issue_request(pk, comm_attributes)
+        return serialize(issue_request), State(t)
 
 
     def process_registration_response(
@@ -157,10 +194,11 @@ class Client:
         Return:
             credentials: create an attribute-based credential for the user
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        pk: PublicKey = deserialize(server_pk)
+        blind_signature: BlindSignature = deserialize(server_response)
+        
+        # client computes the credential - not anonymized
+        return serialize(obtain_credential(pk, blind_signature, private_state.t))
 
 
     def sign_request(
@@ -181,7 +219,30 @@ class Client:
         Returns:
             A message's signature (serialized)
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
-        raise NotImplementedError
+        
+        """ The client computes anonymous credential as well as disclosure proof
+        at this step 
+        Assuming types to be the list of requested location types in the request """
+        
+        pk: PublicKey = deserialize(server_pk)
+        credential: Signature = deserialize(credentials)
+        anonymized_cred = credential.anonymize()
+        
+        # client hides everything except for the requested location types
+        all_attr_keys = get_all_attribute_keys(pk)
+        # collect subscription hidded attributes
+        hidden_subs_keys = list(filter(lambda x: x not in types and x not in [ATTR_SECRET_KEY, ATTR_USERNAME], all_attr_keys))
+        hidden_subs_attrs = [Attribute(pk.attr_indices_dict[key], key, "true" if self.is_subscribed_to_type(key) else "false") for key in hidden_subs_keys]
+        # add secret key and username to hidden attributes
+        hidden_subs_attrs.extend(self.get_sk_username_attributes(pk))
+        return serialize(create_disclosure_proof(pk, anonymized_cred, message, hidden_subs_attrs))
+    
+
+    def is_subscribed_to_type(self, type: str) -> bool:
+        """ Returns whether the client is subscribed to the provided type of location """
+        return type in self.subscriptions
+    
+    def get_sk_username_attributes(self, pk: PublicKey) -> List[Attribute]:
+        """ Returns list of populated secret key and username attribute objects """
+        return [Attribute(pk.attr_indices_dict[ATTR_SECRET_KEY], ATTR_SECRET_KEY, self.secret_key),
+                Attribute(pk.attr_indices_dict[ATTR_USERNAME], ATTR_USERNAME, self.username)]
