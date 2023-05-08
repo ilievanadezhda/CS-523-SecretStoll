@@ -16,14 +16,12 @@ State = Any
 class Server:
     """Server"""
 
-
     def __init__(self):
         """
         Server constructor.
         """
         self.secret_key = None
         self.public_key = None
-
 
     @staticmethod
     def generate_ca(
@@ -49,8 +47,6 @@ class Server:
         (sk, pk) = generate_key(subscriptions)
         # todo: check whether .encode() is needed here
         return serialize(sk), serialize(pk)
-
-
 
     def process_registration(
             self,
@@ -98,7 +94,6 @@ class Server:
         
         return serialize(sign_issue_request(sk, pk, issue_req, issuer_attributes))
 
-
     def check_request_signature(
         self,
         server_pk: bytes,
@@ -142,7 +137,6 @@ class Client:
         self.username = username
         self.subscriptions = []
 
-
     def prepare_registration(
             self,
             server_pk: bytes,
@@ -176,7 +170,6 @@ class Client:
         issue_request, t = create_issue_request(pk, comm_attributes)
         return serialize(issue_request), State(t)
 
-
     def process_registration_response(
             self,
             server_pk: bytes,
@@ -199,7 +192,6 @@ class Client:
         
         # client computes the credential - not anonymized
         return serialize(obtain_credential(pk, blind_signature, private_state.t))
-
 
     def sign_request(
             self,
@@ -236,7 +228,6 @@ class Client:
         # add secret key and username to hidden attributes
         hidden_subs_attrs.extend(self.get_sk_username_attributes(pk))
         return serialize(create_disclosure_proof(pk, anonymized_cred, message, hidden_subs_attrs))
-    
 
     def is_subscribed_to_type(self, type: str) -> bool:
         """ Returns whether the client is subscribed to the provided type of location """
