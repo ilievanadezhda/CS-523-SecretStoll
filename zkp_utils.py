@@ -13,7 +13,7 @@ The following notation is used throughout this module:
 - R (a.k.a. ZKP commitment)
         R = g_0^r_0 * g_1^r_1 * ... * g_k^r_k
 - c (a.k.a. ZKP challenge)
-        H(generators || com || R) TODO: The message might need to be added here => H(generators || com || R || message)
+        H(generators || com || R || message (optional))
 - s (a.k.a. ZKP response)
         [r_0 - c * a_0, r_1 - c * a_1, ..., r_k - c * a_k]
 
@@ -30,11 +30,12 @@ Prover => Verifier:
 - com, generators (public)
 - c (ZKP challenge)
 - s (ZKP response)
+- message (optional)
 
 Verifier:
 - Given a list of generators, a Pedersen commitment (com), a ZKP challenge (c) and a ZKP response (s),
 - Compute R' = com^c * g_0^s_0 * g_1^s_1 * ... * g_k^s_k,
-- Compute c' = H(generators || com || R'),
+- Compute c' = H(generators || com || R' || message (optional)),
 - Accept if and only if c == c'
 
 Option 2:
@@ -42,10 +43,11 @@ Prover => Verifier:
 - com, generators (public)
 - R (ZKP commitment)
 - s (ZKP response)
+- message (optional)
 
 Verifier:
 - Given a list of generators, a Pedersen commitment (com), a ZKP commitment (R) and a ZKP response (s),
-- Compute c' = H(generators || com || R),
+- Compute c' = H(generators || com || R || message (optional)),
 - Accept only if R == com^c' * g_0^s_0 * g_1^s_1 * ... * g_k^s_k
 """
 import hashlib
@@ -95,7 +97,6 @@ def get_zkp_response(
         """ Generate a response """
         return [(random - c * input).mod(G1.order()) for random, input in zip(randoms, prover_input)]
 
-
 def generate_zkp(
         generators: List[Any],
         prover_input: List[Bn],
@@ -111,7 +112,6 @@ def generate_zkp(
         s = get_zkp_response(randoms, c, prover_input)
         return c, s
         
-       
 def verify_zkp(
         com: Any,
         generators: List[Any],
