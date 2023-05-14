@@ -9,9 +9,6 @@ from serialization_utils import *
 from credential import *
 from stroll_utils import *
 
-# Type aliases
-State = Any
-
 
 class Server:
     """Server"""
@@ -53,7 +50,7 @@ class Server:
             server_sk: bytes,
             server_pk: bytes,
             issuance_request: bytes,
-            username: str,
+            #username: str,
             subscriptions: List[str]
         ) -> bytes:
         """ Registers a new account on the server.
@@ -129,12 +126,12 @@ class Server:
 class Client:
     """Client"""
 
-    def __init__(self, secret_key: str, username: str):
+    def __init__(self):
         """
         Client constructor.
         """
-        self.secret_key = secret_key
-        self.username = username
+        self.secret_key = get_secret_key(CLIENT_SK_LENGTH)
+        self.username = None
         self.subscriptions = []
 
     def prepare_registration(
@@ -163,6 +160,7 @@ class Client:
         how to populate the values for all possible subscriptions as issuer-defined
         attributes """
         self.subscriptions = subscriptions
+        self.username = username
         
         pk: PublicKey = deserialize(server_pk)
         comm_attributes = self.get_sk_username_attributes(pk)
@@ -227,7 +225,7 @@ class Client:
         hidden_subs_attrs = [Attribute(pk.attr_indices_dict[key], key, "true" if self.is_subscribed_to_type(key) else "false") for key in hidden_subs_keys]
         # add secret key and username to hidden attributes
         hidden_subs_attrs.extend(self.get_sk_username_attributes(pk))
-        return serialize(create_disclosure_proof(pk, anonymized_cred, message, hidden_subs_attrs))
+        return serialize(create_disclosure_proof(pk, anonymized_cred, hidden_subs_attrs, message))
 
     def is_subscribed_to_type(self, type: str) -> bool:
         """ Returns whether the client is subscribed to the provided type of location """

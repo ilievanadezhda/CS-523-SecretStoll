@@ -16,6 +16,9 @@ class Attribute:
 
     def to_bytes(self) -> bytes:
         return bytes(self.to_formatted_string(), "utf-8")
+    
+    def __repr__(self):
+        return "[{}]: {},{}".format(str(self.index), self.key, self.value)
 
 class PublicKey:
     """ Public key of the signer/issuer"""
