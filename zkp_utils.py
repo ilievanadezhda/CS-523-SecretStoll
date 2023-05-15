@@ -20,9 +20,9 @@ The following notation is used throughout this module:
 There are two actors in a zero-knowledge proof: a prover and a verifier.
 
 Prover:
-- Given a list of generators, a list of prover inputs and a Pedersen commitment (com),
+- Given a list of generators, a list of prover inputs, a Pedersen commitment (com) and an optional message,
 - Generates a ZKP commitment (R): randoms, R <- get_zkp_commitment(generators),
-- Generates a ZKP challenge (c): c <- get_zkp_challenge(generators, com, R),
+- Generates a ZKP challenge (c): c <- get_zkp_challenge(generators, com, R, message (optional)),
 - Generates a ZKP response (s): s <- get_zkp_response(randoms, c, prover_input)
 
 Option 1 (current implementation):
@@ -33,7 +33,7 @@ Prover => Verifier:
 - message (optional)
 
 Verifier:
-- Given a list of generators, a Pedersen commitment (com), a ZKP challenge (c) and a ZKP response (s),
+- Given a list of generators, a Pedersen commitment (com), a ZKP challenge (c), a ZKP response (s) and an optional message, 
 - Compute R' = com^c * g_0^s_0 * g_1^s_1 * ... * g_k^s_k,
 - Compute c' = H(generators || com || R' || message (optional)),
 - Accept if and only if c == c'
@@ -46,7 +46,7 @@ Prover => Verifier:
 - message (optional)
 
 Verifier:
-- Given a list of generators, a Pedersen commitment (com), a ZKP commitment (R) and a ZKP response (s),
+- Given a list of generators, a Pedersen commitment (com), a ZKP commitment (R), a ZKP response (s) and an optional message,
 - Compute c' = H(generators || com || R || message (optional)),
 - Accept only if R == com^c' * g_0^s_0 * g_1^s_1 * ... * g_k^s_k
 """

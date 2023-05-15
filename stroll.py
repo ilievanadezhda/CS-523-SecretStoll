@@ -43,7 +43,7 @@ class Server:
         key, since username is already added in server.py """
         (sk, pk) = generate_key(subscriptions)
         # todo: check whether .encode() is needed here
-        return serialize(sk), serialize(pk)
+        return serialize_to_bytes(sk), serialize_to_bytes(pk)
 
     def process_registration(
             self,
@@ -75,9 +75,9 @@ class Server:
         We are not using the username here, as we do not want to reveal it
         at any moment.
         """
-        sk: SecretKey = deserialize(server_sk)
-        pk: PublicKey = deserialize(server_pk)
-        issue_req: IssueRequest = deserialize(issuance_request)
+        sk: SecretKey = from_bytes_deserialize(server_sk)
+        pk: PublicKey = from_bytes_deserialize(server_pk)
+        issue_req: IssueRequest = from_bytes_deserialize(issuance_request)
         
         # add subscribed attributes first
         issuer_attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in subscriptions]
@@ -89,7 +89,7 @@ class Server:
         
         issuer_attributes.extend([Attribute(pk.attr_indices_dict[attr_key], attr_key, "false") for attr_key in missing_subs_keys])
         
-        return serialize(sign_issue_request(sk, pk, issue_req, issuer_attributes))
+        return serialize_to_bytes(sign_issue_request(sk, pk, issue_req, issuer_attributes))
 
     def check_request_signature(
         self,
@@ -116,8 +116,8 @@ class Server:
         
         Assuming signature is the DisclosureProof model
         """
-        pk: PublicKey = deserialize(server_pk)
-        disclosure: DisclosureProof = deserialize(signature)
+        pk: PublicKey = from_bytes_deserialize(server_pk)
+        disclosure: DisclosureProof = from_bytes_deserialize(signature)
         attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in revealed_attributes]
         
         return verify_disclosure_proof(pk, disclosure, message, attributes)
@@ -162,11 +162,13 @@ class Client:
         self.subscriptions = subscriptions
         self.username = username
         
-        pk: PublicKey = deserialize(server_pk)
+        pk: PublicKey = from_bytes_deserialize(server_pk)
+        # user attributes that go into the Pedersen commitment
+        # username and secret key TODO: check secret key?
         comm_attributes = self.get_sk_username_attributes(pk)
-        
+        # create client's issuance request
         issue_request, t = create_issue_request(pk, comm_attributes)
-        return serialize(issue_request), State(t)
+        return serialize_to_bytes(issue_request), State(t)
 
     def process_registration_response(
             self,
@@ -185,11 +187,11 @@ class Client:
         Return:
             credentials: create an attribute-based credential for the user
         """
-        pk: PublicKey = deserialize(server_pk)
-        blind_signature: BlindSignature = deserialize(server_response)
+        pk: PublicKey = from_bytes_deserialize(server_pk)
+        blind_signature: BlindSignature = from_bytes_deserialize(server_response)
         
         # client computes the credential - not anonymized
-        return serialize(obtain_credential(pk, blind_signature, private_state.t))
+        return serialize_to_bytes(obtain_credential(pk, blind_signature, private_state.t))
 
     def sign_request(
             self,
@@ -214,8 +216,8 @@ class Client:
         at this step 
         Assuming types to be the list of requested location types in the request """
         
-        pk: PublicKey = deserialize(server_pk)
-        credential: Signature = deserialize(credentials)
+        pk: PublicKey = from_bytes_deserialize(server_pk)
+        credential: Signature = from_bytes_deserialize(credentials)
         anonymized_cred = credential.anonymize()
         
         # client hides everything except for the requested location types
@@ -225,7 +227,7 @@ class Client:
         hidden_subs_attrs = [Attribute(pk.attr_indices_dict[key], key, "true" if self.is_subscribed_to_type(key) else "false") for key in hidden_subs_keys]
         # add secret key and username to hidden attributes
         hidden_subs_attrs.extend(self.get_sk_username_attributes(pk))
-        return serialize(create_disclosure_proof(pk, anonymized_cred, hidden_subs_attrs, message))
+        return serialize_to_bytes(create_disclosure_proof(pk, anonymized_cred, hidden_subs_attrs, message))
 
     def is_subscribed_to_type(self, type: str) -> bool:
         """ Returns whether the client is subscribed to the provided type of location """
@@ -235,3 +237,4 @@ class Client:
         """ Returns list of populated secret key and username attribute objects """
         return [Attribute(pk.attr_indices_dict[ATTR_SECRET_KEY], ATTR_SECRET_KEY, self.secret_key),
                 Attribute(pk.attr_indices_dict[ATTR_USERNAME], ATTR_USERNAME, self.username)]
+    

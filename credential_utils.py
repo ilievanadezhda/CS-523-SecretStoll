@@ -30,12 +30,18 @@ class PublicKey:
         self.Y_tilde = Y_tilde
         self.attr_indices_dict = attr_indices_dict
 
+    def __repr__(self):
+        return "g: {}, Y: {}, g_tilde: {}, X_tilde: {}, Y_tilde: {}, attr_indices_dict: {}".format(self.g, self.Y, self.g_tilde, self.X_tilde, self.Y_tilde, self.attr_indices_dict)
+
 class SecretKey:
     """ Secret key of the signer/issuer"""
     def __init__(self, x, X, y):
         self.x = x
         self.X = X
         self.y = y
+
+    def __repr__(self):
+        return "x: {}, X: {}, y: {}".format(self.x, self.X, self.y)
 
 class AnonymousCredential:
     """ Anonymized signature on a vector of messages"""
