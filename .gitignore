@@ -3,3 +3,11 @@
 .project
 .pydevproject
 /.pytest_cache/
+/tor
+username.txt
+secret_key.txt
+subscriptions.txt
+anon.cred
+key-client.pub
+key.pub
+key.sec

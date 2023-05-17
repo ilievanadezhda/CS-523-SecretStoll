@@ -1,10 +1,17 @@
 from serialization import jsonpickle
 
 
-# TODO: Check if this is the right way to do it
-def serialize_to_bytes(obj):
-    return jsonpickle.encode(obj).encode()
+def serialize(obj):
+    return jsonpickle.encode(obj)
 
-# TODO: Check if this is the right way to do it
+
+def deserialize(obj):
+    return jsonpickle.decode(obj)
+
+
+def serialize_to_bytes(obj):
+    return serialize(obj).encode("utf-8")
+
+
 def from_bytes_deserialize(obj):
-    return jsonpickle.decode(obj.decode())
+    return deserialize(obj.decode("utf-8"))

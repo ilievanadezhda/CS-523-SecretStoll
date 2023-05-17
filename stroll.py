@@ -5,7 +5,6 @@ Classes that you need to complete.
 from typing import Any, Dict, List, Union, Tuple
 
 from serialization_utils import *
-# Optional import
 from credential import *
 from stroll_utils import *
 
@@ -42,7 +41,6 @@ class Server:
         """Should be called with all possible subscriptions + secret_key attribute
         key, since username is already added in server.py """
         (sk, pk) = generate_key(subscriptions)
-        # todo: check whether .encode() is needed here
         return serialize_to_bytes(sk), serialize_to_bytes(pk)
 
     def process_registration(
@@ -50,7 +48,7 @@ class Server:
             server_sk: bytes,
             server_pk: bytes,
             issuance_request: bytes,
-            #username: str,
+            username: str,
             subscriptions: List[str]
         ) -> bytes:
         """ Registers a new account on the server.
@@ -130,9 +128,6 @@ class Client:
         """
         Client constructor.
         """
-        self.secret_key = get_secret_key(CLIENT_SK_LENGTH)
-        self.username = None
-        self.subscriptions = []
 
     def prepare_registration(
             self,
@@ -159,12 +154,15 @@ class Client:
         and sends requested subscriptions - based on these the server will know
         how to populate the values for all possible subscriptions as issuer-defined
         attributes """
-        self.subscriptions = subscriptions
-        self.username = username
         
+        """ User's secret key, username and subscriptions are persisted in the file system """
+        persist_secret_key()
+        persist_username(username)
+        persist_subscriptions(subscriptions)
+                
         pk: PublicKey = from_bytes_deserialize(server_pk)
         # user attributes that go into the Pedersen commitment
-        # username and secret key TODO: check secret key?
+        # username and secret key
         comm_attributes = self.get_sk_username_attributes(pk)
         # create client's issuance request
         issue_request, t = create_issue_request(pk, comm_attributes)
@@ -222,19 +220,21 @@ class Client:
         
         # client hides everything except for the requested location types
         all_attr_keys = get_all_attribute_keys(pk)
-        # collect subscription hidded attributes
+        # collect subscription hidden attributes
         hidden_subs_keys = list(filter(lambda x: x not in types and x not in [ATTR_SECRET_KEY, ATTR_USERNAME], all_attr_keys))
         hidden_subs_attrs = [Attribute(pk.attr_indices_dict[key], key, "true" if self.is_subscribed_to_type(key) else "false") for key in hidden_subs_keys]
         # add secret key and username to hidden attributes
         hidden_subs_attrs.extend(self.get_sk_username_attributes(pk))
         return serialize_to_bytes(create_disclosure_proof(pk, anonymized_cred, hidden_subs_attrs, message))
 
-    def is_subscribed_to_type(self, type: str) -> bool:
+    def is_subscribed_to_type(self, a_type: str) -> bool:
         """ Returns whether the client is subscribed to the provided type of location """
-        return type in self.subscriptions
+        return a_type in read_subscriptions()
     
     def get_sk_username_attributes(self, pk: PublicKey) -> List[Attribute]:
         """ Returns list of populated secret key and username attribute objects """
-        return [Attribute(pk.attr_indices_dict[ATTR_SECRET_KEY], ATTR_SECRET_KEY, self.secret_key),
-                Attribute(pk.attr_indices_dict[ATTR_USERNAME], ATTR_USERNAME, self.username)]
+        return [Attribute(pk.attr_indices_dict[ATTR_SECRET_KEY], ATTR_SECRET_KEY, read_secret_key()),
+                Attribute(pk.attr_indices_dict[ATTR_USERNAME], ATTR_USERNAME, read_username())]
     
+    def get_secret_key(self):
+        return read_secret_key()

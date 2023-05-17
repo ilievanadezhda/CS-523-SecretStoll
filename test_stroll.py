@@ -3,11 +3,14 @@ import pytest
 from stroll import *
 
 """ Test generate_ca() """
+
+
 def test_generate_ca_1():
     subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
     server = Server()
     sk, pk = server.generate_ca(subscriptions)
     assert sk is not None and pk is not None
+
 
 def test_generate_ca_2():
     subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
@@ -15,7 +18,10 @@ def test_generate_ca_2():
     sk, pk = server.generate_ca(subscriptions)
     assert isinstance(sk, bytes) and isinstance(pk, bytes)
 
+
 """ Registration tests """
+
+
 def test_success_registration():
     # setup
     server = Server()
@@ -29,7 +35,7 @@ def test_success_registration():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # check if the credential is valid
@@ -39,9 +45,10 @@ def test_success_registration():
     bar_attr = Attribute(pk_deserialized.attr_indices_dict["bar"], "bar", "true").to_bytes()
     dojo_attr = Attribute(pk_deserialized.attr_indices_dict["dojo"], "dojo", "false").to_bytes()
     username_attr = Attribute(pk_deserialized.attr_indices_dict["username"], "username", "username").to_bytes()
-    secret_key_attr = Attribute(pk_deserialized.attr_indices_dict["secret_key"], "secret_key", client.secret_key).to_bytes()
+    secret_key_attr = Attribute(pk_deserialized.attr_indices_dict["secret_key"], "secret_key", client.get_secret_key()).to_bytes()
     attributes = [restaurant_attr, bar_attr, dojo_attr, username_attr, secret_key_attr]
     assert verify(from_bytes_deserialize(pk), from_bytes_deserialize(credential), attributes)
+
 
 @pytest.mark.xfail(raises=AssertionError)
 def test_failure_registration_changed_attribute_value():
@@ -57,7 +64,7 @@ def test_failure_registration_changed_attribute_value():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # check if the credential is valid
@@ -68,11 +75,14 @@ def test_failure_registration_changed_attribute_value():
     bar_attr = Attribute(pk_deserialized.attr_indices_dict["bar"], "bar", "true").to_bytes()
     dojo_attr = Attribute(pk_deserialized.attr_indices_dict["dojo"], "dojo", "false").to_bytes()
     username_attr = Attribute(pk_deserialized.attr_indices_dict["username"], "username", "username").to_bytes()
-    secret_key_attr = Attribute(pk_deserialized.attr_indices_dict["secret_key"], "secret_key", client.secret_key).to_bytes()
+    secret_key_attr = Attribute(pk_deserialized.attr_indices_dict["secret_key"], "secret_key", client.get_secret_key()).to_bytes()
     attributes = [restaurant_attr, bar_attr, dojo_attr, username_attr, secret_key_attr]
     assert verify(from_bytes_deserialize(pk), from_bytes_deserialize(credential), attributes)
 
+
 """ Request tests"""
+
+
 def test_success_request_1():
     # setup
     server = Server()
@@ -87,7 +97,7 @@ def test_success_request_1():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # REQUEST
@@ -101,6 +111,7 @@ def test_success_request_1():
     message_signature = client.sign_request(pk, credential, message, types)
     # server: check request signature
     assert server.check_request_signature(pk, message, types, message_signature)
+
 
 def test_success_request_2():
     # setup
@@ -116,7 +127,7 @@ def test_success_request_2():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # REQUEST
@@ -130,6 +141,7 @@ def test_success_request_2():
     message_signature = client.sign_request(pk, credential, message, types)
     # server: check request signature
     assert server.check_request_signature(pk, message, types, message_signature)
+
 
 @pytest.mark.xfail(raises=AssertionError)
 def test_failure_request_not_subscribed_to_type_1():
@@ -146,7 +158,7 @@ def test_failure_request_not_subscribed_to_type_1():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # REQUEST
@@ -160,6 +172,7 @@ def test_failure_request_not_subscribed_to_type_1():
     message_signature = client.sign_request(pk, credential, message, types)
     # server: check request signature
     assert server.check_request_signature(pk, message, types, message_signature)
+
 
 @pytest.mark.xfail(raises=AssertionError)
 def test_failure_request_not_subscribed_to_type_2():
@@ -176,7 +189,7 @@ def test_failure_request_not_subscribed_to_type_2():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # REQUEST
@@ -190,6 +203,7 @@ def test_failure_request_not_subscribed_to_type_2():
     message_signature = client.sign_request(pk, credential, message, types)
     # server: check request signature
     assert server.check_request_signature(pk, message, types, message_signature)
+
 
 @pytest.mark.xfail(raises=AssertionError)
 def test_failure_different_message():
@@ -206,7 +220,7 @@ def test_failure_different_message():
     # client: prepare registration
     issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
     # server: process registration
-    blind_signature = server.process_registration(sk, pk, issue_request, client_subscriptions)
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
     # client: process registration response
     credential = client.process_registration_response(pk, blind_signature, state)
     # REQUEST

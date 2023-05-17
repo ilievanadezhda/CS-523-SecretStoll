@@ -58,7 +58,7 @@ def test_evaluation():
     # operation
     start_issuance = timer()
     issue_request, state = client.prepare_registration(result[1], username, subscriptions)
-    signature = server.process_registration(result[0], result[1], issue_request, subscriptions)
+    signature = server.process_registration(result[0], result[1], issue_request, username, subscriptions)
     credential = client.process_registration_response(result[1], signature, state)
     issuance_comp_cost = timer() - start_issuance
     
