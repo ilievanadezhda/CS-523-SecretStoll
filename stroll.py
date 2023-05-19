@@ -40,6 +40,7 @@ class Server:
         """
         """Should be called with all possible subscriptions + secret_key attribute
         key, since username is already added in server.py """
+        subscriptions.append(ATTR_SECRET_KEY)
         (sk, pk) = generate_key(subscriptions)
         return serialize_to_bytes(sk), serialize_to_bytes(pk)
 
@@ -78,7 +79,10 @@ class Server:
         issue_req: IssueRequest = from_bytes_deserialize(issuance_request)
         
         # add subscribed attributes first
-        issuer_attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in subscriptions]
+        try:
+            issuer_attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in subscriptions]
+        except:
+            raise ValueError("Unrecognized subscription type")
         
         # append attributes for all remaining subscriptions
         all_attr_keys = get_all_attribute_keys(pk)
@@ -116,7 +120,11 @@ class Server:
         """
         pk: PublicKey = from_bytes_deserialize(server_pk)
         disclosure: DisclosureProof = from_bytes_deserialize(signature)
-        attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in revealed_attributes]
+        try:
+            attributes = [Attribute(pk.attr_indices_dict[attr_key], attr_key, "true") for attr_key in revealed_attributes]
+        except:
+            print("Unrecognized subscription type")
+            return False
         
         return verify_disclosure_proof(pk, disclosure, message, attributes)
 

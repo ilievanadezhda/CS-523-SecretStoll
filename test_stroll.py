@@ -6,14 +6,14 @@ from stroll import *
 
 
 def test_generate_ca_1():
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     server = Server()
     sk, pk = server.generate_ca(subscriptions)
     assert sk is not None and pk is not None
 
 
 def test_generate_ca_2():
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     server = Server()
     sk, pk = server.generate_ca(subscriptions)
     assert isinstance(sk, bytes) and isinstance(pk, bytes)
@@ -27,7 +27,7 @@ def test_success_registration():
     server = Server()
     client = Client()
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
@@ -56,7 +56,7 @@ def test_failure_registration_changed_attribute_value():
     server = Server()
     client = Client()
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
@@ -89,7 +89,7 @@ def test_success_request_1():
     client = Client()
     # REGISTRATION
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
@@ -119,7 +119,7 @@ def test_success_request_2():
     client = Client()
     # REGISTRATION
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
@@ -150,7 +150,7 @@ def test_failure_request_not_subscribed_to_type_1():
     client = Client()
     # REGISTRATION
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
@@ -181,7 +181,7 @@ def test_failure_request_not_subscribed_to_type_2():
     client = Client()
     # REGISTRATION
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
@@ -212,7 +212,7 @@ def test_failure_different_message():
     client = Client()
     # REGISTRATION
     # all subscriptions supported by the server + username
-    subscriptions = ["restaurant", "bar", "dojo", "username", "secret_key"]
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
     # server: generate keys
     sk, pk = server.generate_ca(subscriptions)
     # subscriptions that client wants to subscribe to
