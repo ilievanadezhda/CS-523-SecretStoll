@@ -79,6 +79,24 @@ def test_failure_registration_changed_attribute_value():
     attributes = [restaurant_attr, bar_attr, dojo_attr, username_attr, secret_key_attr]
     assert verify(from_bytes_deserialize(pk), from_bytes_deserialize(credential), attributes)
 
+@pytest.mark.xfail(raises=ValueError) #TODO: Should it be KeyError?
+def test_failure_registration_unsupported_attribute():
+    # setup
+    server = Server()
+    client = Client()
+    # all subscriptions supported by the server + username
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
+    # server: generate keys
+    sk, pk = server.generate_ca(subscriptions)
+    # subscriptions that client wants to subscribe to (cinema is not supported by the server)
+    client_subscriptions = ["restaurant, cinema"]
+    # client: prepare registration
+    issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
+    # server: process registration
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
+    # client: process registration response
+    credential = client.process_registration_response(pk, blind_signature, state)
+
 
 """ Request tests"""
 
