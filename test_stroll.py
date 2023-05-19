@@ -222,6 +222,35 @@ def test_failure_request_not_subscribed_to_type_2():
     # server: check request signature
     assert server.check_request_signature(pk, message, types, message_signature)
 
+def test_failure_request_unsupported_type():
+    # setup
+    server = Server()
+    client = Client()
+    # REGISTRATION
+    # all subscriptions supported by the server + username
+    subscriptions = ["restaurant", "bar", "dojo", "username"]
+    # server: generate keys
+    sk, pk = server.generate_ca(subscriptions)
+    # subscriptions that client wants to subscribe to
+    client_subscriptions = ["restaurant", "bar"]
+    # client: prepare registration
+    issue_request, state = client.prepare_registration(pk, "username", client_subscriptions)
+    # server: process registration
+    blind_signature = server.process_registration(sk, pk, issue_request, "username", client_subscriptions)
+    # client: process registration response
+    credential = client.process_registration_response(pk, blind_signature, state)
+    # REQUEST
+    # client: sign request
+    # message
+    lat, lon = 46.5197, 6.6323
+    message = f"{lat},{lon}".encode()
+    # "cinema" is not supported by the server
+    types = ["cinema"]
+    # request
+    message_signature = client.sign_request(pk, credential, message, types)
+    # server: check request signature
+    assert not server.check_request_signature(pk, message, types, message_signature)
+
 
 @pytest.mark.xfail(raises=AssertionError)
 def test_failure_different_message():
