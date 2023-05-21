@@ -79,7 +79,7 @@ def test_failure_registration_changed_attribute_value():
     attributes = [restaurant_attr, bar_attr, dojo_attr, username_attr, secret_key_attr]
     assert verify(from_bytes_deserialize(pk), from_bytes_deserialize(credential), attributes)
 
-@pytest.mark.xfail(raises=ValueError) #TODO: Should it be KeyError?
+@pytest.mark.xfail(raises=ValueError)
 def test_failure_registration_unsupported_attribute():
     # setup
     server = Server()
