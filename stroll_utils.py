@@ -32,10 +32,10 @@ def get_random_secret_key(length: int) -> str:
     return sk
 
 
-def write_to_file(content: str, file_name: str):
+def write_to_file(content: str, file_name: str, strategy: str = "wt"):
     """ Writes the content to the provided file name.
     File is created if not existent and re-written each time """
-    with open(file_name, "wt") as f:
+    with open(file_name, strategy) as f:
         f.write(content)
 
 
