@@ -51,19 +51,6 @@ def test_evaluation(num_attributes, write_header):
     if write_header:
         write_result("num_attributes,generation_comp,generation_comm,issuance_comp,issuance_comm,showing_comp,showing_comm,verification_comp,verification_comm")
     
-    # save the results of the repeated executions in arrays
-    generation_comp_arr = []
-    generation_comm_arr = []
-    
-    issuance_comp_arr = []
-    issuance_comm_arr = []
-    
-    disclosure_comp_arr = []
-    disclosure_comm_arr = []
-    
-    verification_comp_arr = []
-    verification_comm_arr = []
-    
     for _ in range(NUM_EXECUTIONS_SD):
         ### KEY GENERATION ###
         # setup
@@ -81,8 +68,6 @@ def test_evaluation(num_attributes, write_header):
         # NO COMMUNICATION COST, HAPPENS ON SERVER SIDE ONLY
         generation_comm_cost = measure_communication_cost([])
         print("Key generation: {}s,{}kb".format(generation_comp_cost, generation_comm_cost))
-        generation_comp_arr.append(generation_comp_cost)
-        generation_comm_arr.append(generation_comm_cost)
     
         ### ISSUANCE (commitment, signing, unblinding) ###
         # setup
@@ -99,8 +84,6 @@ def test_evaluation(num_attributes, write_header):
     
         issuance_comm_cost = measure_communication_cost([issue_request, subscriptions, signature])
         print("Issuance: {}s,{}kb".format(issuance_comp_cost, issuance_comm_cost))
-        issuance_comp_arr.append(issuance_comp_cost)
-        issuance_comm_arr.append(issuance_comm_cost)
     
         ### SHOWING CREDENTIAL ###
         # setup
@@ -115,8 +98,6 @@ def test_evaluation(num_attributes, write_header):
     
         disclosure_comm_cost = measure_communication_cost([message, types, disclosure_proof])
         print("Showing: {}s,{}kb".format(disclosure_comp_cost, disclosure_comm_cost))
-        disclosure_comp_arr.append(disclosure_comp_cost)
-        disclosure_comm_arr.append(disclosure_comm_cost)
     
         ### VERIFYING CREDENTIAL ###
         # operation
@@ -127,10 +108,8 @@ def test_evaluation(num_attributes, write_header):
         # NO COMMUNICATION COST, HAPPENS ON SERVER SIDE ONLY
         verification_comm_cost = measure_communication_cost([])
         print("Verifying: {}s,{}kb".format(verification_comp_cost, verification_comm_cost))
-        verification_comp_arr.append(verification_comp_cost)
-        verification_comm_arr.append(verification_comm_cost)
     
-    write_result("{},{},{},{},{},{},{},{},{}".format(str(num_attributes), str(mean(generation_comp_arr)), str(mean(generation_comm_arr)), str(mean(issuance_comp_arr)), str(mean(issuance_comm_arr)), str(mean(disclosure_comp_arr)), str(mean(disclosure_comm_arr)), str(mean(verification_comp_arr)), str(mean(verification_comm_arr))))
+        write_result("{},{},{},{},{},{},{},{},{}".format(str(num_attributes), str(generation_comp_cost), str(generation_comm_cost), str(issuance_comp_cost), str(issuance_comm_cost), str(disclosure_comp_cost), str(disclosure_comm_cost), str(verification_comp_cost), str(verification_comm_cost)))
 
 
 """ Utility tests """
