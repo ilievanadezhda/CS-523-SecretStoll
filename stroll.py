@@ -38,8 +38,8 @@ class Server:
             You are free to design this as you see fit, but the return types
             should be encoded as bytes.
         """
-        """Should be called with all possible subscriptions + secret_key attribute
-        key, since username is already added in server.py """
+        """Should be called with all subscriptions attribute keys, since username
+        is already added in server.py and secret key is added here automatically"""
         subscriptions.append(ATTR_SECRET_KEY)
         (sk, pk) = generate_key(subscriptions)
         return serialize_to_bytes(sk), serialize_to_bytes(pk)
