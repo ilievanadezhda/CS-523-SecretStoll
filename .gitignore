@@ -12,3 +12,4 @@ key-client.pub
 key.pub
 key.sec
 evaluation.csv
+/privacy_evaluation/__pycache__/
