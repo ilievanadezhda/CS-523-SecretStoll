@@ -9,7 +9,7 @@ from credential_utils import PublicKey
 from serialization_utils import serialize_to_bytes, from_bytes_deserialize
 from stroll import Server, Client
 from stroll_utils import write_to_file
-from statistics import mean
+
 
 EVALUATION_RESULTS_FILENAME = "evaluation.csv"
 NUM_EXECUTIONS_SD = 30
@@ -44,7 +44,7 @@ def write_result(result_line: str):
 """ Evaluation test """
 
 
-@pytest.mark.parametrize("num_attributes,write_header", [(2, True), (5, False), (10, False), (50, False), (100, False), (200, False), (500, False), (1000, False)])
+@pytest.mark.parametrize("num_attributes,write_header", [(2, True), (5, False), (10, False), (25, False), (50, False), (75, False), (100, False), (125, False), (150, False), (175, False), (200, False)])
 def test_evaluation(num_attributes, write_header):
     """ The integration test for the evaluation """
     
