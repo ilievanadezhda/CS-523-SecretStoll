@@ -1,9 +1,10 @@
 import numpy as np
-
+import sys
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
-
+import sklearn.metrics
+import pandas as pd
 
 def classify(train_features, train_labels, test_features, test_labels):
 
@@ -30,7 +31,7 @@ def classify(train_features, train_labels, test_features, test_labels):
     clf.fit(train_features, train_labels)
     # Use the classifier to make predictions on the test features.
     predictions = clf.predict(test_features)
-    
+
     return predictions
 
 def perform_crossval(features, labels, folds=10):
@@ -54,14 +55,21 @@ def perform_crossval(features, labels, folds=10):
     labels = np.array(labels)
     features = np.array(features)
 
+    # Scores
+    accuracy = []
+    f1 = []
+
     for train_index, test_index in kf.split(features, labels):
         X_train, X_test = features[train_index], features[test_index]
         y_train, y_test = labels[train_index], labels[test_index]
         predictions = classify(X_train, y_train, X_test, y_test)
+        # Evaluate performance
+        accuracy.append(sklearn.metrics.accuracy_score(y_test, predictions))
+        f1.append(sklearn.metrics.f1_score(y_test, predictions, average='weighted'))
 
-    ###############################################
-    # TODO: Write code to evaluate the performance of your classifier
-    ###############################################
+    print("Accuracy: %0.2f (+/- %0.2f)" % (np.mean(accuracy), np.std(accuracy)))
+    print("F1: %0.2f (+/- %0.2f)" % (np.mean(f1), np.std(f1)))
+
 
 def load_data():
 
@@ -97,6 +105,11 @@ def load_data():
 
     features = []
     labels = []
+
+    df = pd.read_csv('part 3/features.csv')
+    for row in df.iterrows():
+        features.append(row[1][1:].tolist())
+        labels.append(int(row[1][0]))
 
     return features, labels
         

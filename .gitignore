@@ -14,3 +14,4 @@ key.sec
 evaluation.csv
 /privacy_evaluation/__pycache__/
 /ml/grid_*.pcap
+/part 3/data/
