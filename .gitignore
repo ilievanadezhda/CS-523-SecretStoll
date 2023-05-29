@@ -13,5 +13,6 @@ key.pub
 key.sec
 evaluation.csv
 /privacy_evaluation/__pycache__/
+/privacy_evaluation/latex/
 /ml/grid_*.pcap
-/part 3/data/
+/part_3/data/

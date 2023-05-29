@@ -2,10 +2,11 @@
 echo "========================="
 echo "Begining data collection "
 echo "========================="
+cd ..
 for i in {1..100}
     do
         # Create base file name
-        base_file_name="data/grid_$i"
+        base_file_name="part_3/data/grid_$i"
         # Generate a timestamp 
         timestamp=$(date +"%Y%m%d_%H%M%S")
         # Concatenate the timestamp with the base file name
