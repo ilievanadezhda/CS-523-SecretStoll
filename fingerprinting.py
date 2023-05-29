@@ -106,7 +106,7 @@ def load_data():
     features = []
     labels = []
 
-    df = pd.read_csv('part 3/features.csv')
+    df = pd.read_csv('part_3/features.csv')
     for row in df.iterrows():
         features.append(row[1][1:].tolist())
         labels.append(int(row[1][0]))
