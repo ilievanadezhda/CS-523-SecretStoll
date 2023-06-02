@@ -2,160 +2,23 @@
 
 ## Introduction
 
-In this project, you will develop a location-based application, SecretStroll,
-that enables users to search for nearby points of interest (POI). We provide you
-with a skeleton to help with the development.
-
-**Virtualization.** We provide a virtual machine (VM) to facilitate the setup
-and configuration of the SecretStroll and reduce potential networking problems
-while running the application in different environments.
-
-Also, we use Docker to enforce isolation between the client and server on the
-virtual machine. Docker is a piece of software that uses the capabilities of
-the Linux kernel to run processes in a sandboxed environment. Thus, both the
-server and the client will "think" they are running in two independent systems.
-
-**Skeleton.** Both the client and the server provide a command-line interface to
-run and interact with the server. The underlying location-based service is
-already implemented in the skeleton, and your task is to add the authentication
-with attribute-based credentials.
-
-We strongly recommend to use the `petrelic` cryptographic-pairing library to
-implement PS credentials. You can find the project repository in
-[petrelic](https://github.com/spring-epfl/petrelic/) and you can visit
-<https://petrelic.readthedocs.io> for documentation. This library is
-bundled in the provided Docker container and virtual machine.
-
-The skeleton has already implemented and integrated capabilities to save,
-manage, and load keys and credentials as byte arrays. You need to implement
-(de)serialization methods to match the API. We provide `serialization.py` as a
-`petrelic` extension of `jsonpickle`, a serialization library, to help you with
-the serialization of cryptographic objects.
-
-Our skeleton and Docker infrastructure takes care of syncing and deploying your
-code. You only need to implement attribute-based credentials and update the
-`stroll.py` file to use it.
-
-**Testing**. An integral part of system development is testing the system. In
-your implementation, you should check **both** success and failure paths when
-your working with cryptographic primitives. In this project, you **must** use
-the *pytest* framework to test your system. You can visit
-[pytest tutorial](https://www.tutorialspoint.com/pytest/index.htm) for guides.
-
-## Setting up the development environment
-
-### Virtual machine
-
-We provide you with two VM images for SecretStroll project on which we have
-already installed all the necessary applications and libraries:
-
-- A VirtualBox image for people using a x86_64 CPU architecture. (i.e. almost
-  all laptops...)
-- A zipped UTM image for people using a ARM 64 CPU architecture. (i.e. Apple
-  Silicon Macs)
-
-If it is not already done, you can install VirtualBox or UTM on your laptop by
-following the instructions in their respective documentation:
-
-- [VirtualBox](https://www.virtualbox.org/wiki/End-user_documentation)
-- [UTM](https://docs.getutm.app/)
-
-
-**We only provide support for projects running inside the VM and we strongly
-recommend you to develop inside the VM.**
-
-There are two accounts on the VM (`user:password`):
-
-```
-student:student
-root:root
-```
-
-You can set up SSH on the VM and connect from your host or directly use the VM
-as your development environment.
-
-
-#### Setting up SSH to the VM
-
-**For VirtualBox**
-
-In VirtualBox, you can set up SSH access to the VM by following these steps:
-
-* Open the settings of your image
-* Go to the "Network" panel
-* Choose "Advanced" and click on the "Port forwarding" button
-* Add a forwarding rule (green "plus" button on the side)
-* In the forwarding rule, leave both IP addresses empty, set **Host port** to _2222_,
-  and **Guest port** to 22 (the default SSH port)
-* Restart the virtual machine
-
-**For UTM**
-
-In UTM, you can set up SSH access to the VM by following these steps:
-
-* Open the settings of your image
-* Go to the "Network" panel
-* Add a new port forward rule (*New* button on the right of the *Port Forward* frame)
-* In the forwarding rule, leave both IP addresses empty, set **Host Port** to _2222_,
-  and **Guest Port** to 22 (the default SSH port)
-* Restart the virtual machine
-
-Once the port forwarding rule is effective, you can connect to your virtual machine via SSH:
-`ssh -p 2222 student@127.0.0.1`
-
-This is how you copy files _TO_ the VM:
-`scp -P 2222 <path_to_copy_from_on_host_OS> student@127.0.0.1:<path_to_copy_to_on_guest_OS>`
-
-Copy files _FROM_ the VM:
-`scp -P 2222 student@127.0.0.1:<path_to_copy_from_on_guest_OS> <path_to_copy_to_on_host_OS> `
-
-### Code Skeleton
-
-The first step of this project will be to retrieve the skeleton that you will
-have to use as a base implementation. The most convenient way to do this will
-be to clone the public repository of this course with `git`.
-
-```
-git clone https://github.com/spring-epfl/CS-523-public.git cs523
-```
-
-We use Python 3 in this project and all necessary Python components are already
-installed on the VM and Docker containers. You can find installed libraries in
-the file `requirements.txt`.
-
-Feel free to have a look at `client.py` and `server.py` to see how the classes
-and methods are used.
-
-**Note:** The library `petrelic`is currently only distributed for Linux
-systems, if you are not using the VM or a Linux system, you should still be
-able to test your code by running it within the Docker containers build with
-the provided configuration.
-
-### Collaboration
-
-You can use git to sync your work with your teammates. However, keep in mind
-that you are not allowed to use public repositories, so make sure that your
-repository is **private**.
-
-If you cloned our git repository to retrieve the skeleton as we advised, you
-can replace the remote URL to your own git repository
-
-```
-cd cs523
-git remote set-url origin git@github.com:<your GitHub user ID>/<your private repo>
-```
+In this project, we developed a location-based application, SecretStroll,
+that enables users to search for nearby points of interest (POI).
 
 ## Files in this repository
 
 This repository contains the skeleton code for Parts 1 and 3:
 
-* `credential.py`—Source code that you have to complete.
-* `stroll.py`—Source code that you have to complete.
+* `credential.py`—Contains the signature scheme and ABC implementation.
+* `credential_utils.py`—Contains utility methods used in the implementation of the signature scheme and the ABCs.
+* `stroll.py`—Contains the implementation of the client and server code related to the ABCs.
+* `stroll_utils.py`—Contains utility methods used in `stroll.py`.
 * `client.py`—Client CLI calling classes and methods defined in `stroll.py`.
 * `server.py`—Server CLI calling classes and methods defined in `stroll.py`.
 * `serialization.py`—Extends the library `jsonpickle` to serialize python
   objects.
-* `fingerprinting.py`—skeleton for Part 3.
+* `serialization_utils.py`—Contains utility methods for the serialization.
+* `fingerprinting.py`—Contains ML implementation for the fingerprinting attack.
 * `requirements.txt`—Required Python libraries.
 * `docker-compose.yaml`—*docker compose* configuration describing how to run the
   Docker containers.
@@ -163,14 +26,17 @@ This repository contains the skeleton code for Parts 1 and 3:
   and the server.
 * `tor/`—Intentionally empty folder needed to run a Tor server.
 * `fingerprint.db`—Database containing POI information for Part 3.
-
-The directory `privacy_evaluation` contains files for the part 2.
+* `evaluation_stroll.py`—Test for evaluation of the performance of the ABCs.
+* `test_*`-Files containing unit tests for the respective implementation files.
+* `zkp_utils.py`-Contains implementation of the zero knowledge proofs.
+* `capture.sh`-Shell script for capturing the request traces used for feature extraction.
+* `feature_extraction.ipynb`-Contains the feature extraction code and writes the extracted feature to file.
+The generated file is later used in `fingerprinting.py`.
+* `privacy_evaluation.ipynb`-Contains the deanonymization attack and defence code.
 
 ## Server and client deployment
 
-The server and client code deployment is handled by Docker and our skeleton. In
-this section, we introduce our Docker infrastructure and how to use it. Then, we
-provide a step-by-step guide of running the client and server.
+The server and client code deployment is handled by Docker.
 
 ### Working with the Docker infrastructure
 
@@ -214,35 +80,11 @@ the next time. This can be fixed by removing the network bridge with
 `docker compose down` and destroying the stopped Docker containers with
 `docker container prune -f`.*
 
-### Accessing the data
-
-The code in the `secretstroll` directory is shared between your VM and the
-Docker containers, so modifications you make in your VM will also appear in
-containers. Feel free to read the file `docker-compose.yml` to see how it is
-done.
-
-If you need to transfer some data between your VM and your host machine, you
-can set up SSH access and use the `scp` command as detailed before.
-
-Another option for people who use VirtualBox is to have shared directories
-between the VM and your host. For this feature to work correctly you need to
-have VirtualBox's *Guest Additions* installed on the VM. We have already
-installed *Guest Additions* on the VM we provided for this course, but you
-might have to update it to work with your version of VirtualBox, in which case,
-please refer to their documentation.
-
-Note also that you will need to use Tor in this project (see section below),
-and that Tor is quite sensitive to its directories' permissions. As it is often
-not possible to map directly the permission between the host and guest when
-sharing some files, be careful to not run your project directly from the shared
-directory as incorrect permission given to the `tor` directory of your project
-can prevent Tor from starting.
-
 ### Tor integration
 
-Integrating Tor into your project should be seamless. The Docker configuration
-we provide is designed to run Tor in the background, and the code is designed
-to use the Tor if requested with no effort on your part.
+Integrating Tor into the project should be seamless. The Docker configuration
+is designed to run Tor in the background, and the code is designed
+to use the Tor if requested with no additional effort.
 
 If your project works if used normally, but fails when using Tor, you can check
 if its log file in the Docker container gives a clue to what is happening:
@@ -250,9 +92,6 @@ if its log file in the Docker container gives a clue to what is happening:
 ```
 cat /var/log/service/tor/current
 ```
-
-If you still do not know what causes the problem or do not know how to correct
-it, call an assistant.
 
 ### Server
 
@@ -310,11 +149,6 @@ hidden service. The server's Docker container configures Tor to create a hidden
 service and redirects the traffic to the Python server. The server serves local
 and hidden service requests simultaneously by default.
 
-The server also contains a database, `fingerprint.db`. This is used in Part 3.
-The database has a POI table that contains records for each POI. The server
-returns the list of POIs associated with a queried cell ID, and information
-about each POI in the list. You must not modify the database.
-
 ### Client
 
 To execute a shell in the client container, run the following command:
@@ -364,7 +198,7 @@ optional arguments:
 ```
 
 Use `loc` and `grid` commands to retrieve information about points of interests
-using lat/lon location (Part 1) and cell identifier (Part 3), respectively:
+using lat/lon location and cell identifier, respectively:
 ```
 python3 client.py loc 46.52345 6.57890 -T restaurant -T bar
 

@@ -1,76 +1,238 @@
 import pytest
+from petrelic.multiplicative.pairing import G1
 
 from credential import *
 from credential_utils import *
+import string
 
-def test_scheme_1():
-    message_vec = [b"hello", b"world"]
-    sk, pk = generate_key(message_vec)
-    signature = sign(sk, message_vec)
-    assert verify(pk, signature, message_vec)
+""" Helper functions """
+def encode_to_bytes(strings: List[str]):
+    return [x.encode() for x in strings]
 
-@pytest.mark.xfail(raises=AssertionError)
-def test_scheme_2():
-    message_vec_1 = [b"hello", b"world"]
-    message_vec_2 = [b"hello", b"world!"]
-    sk, pk = generate_key(message_vec_1)
-    signature = sign(sk, message_vec_1)
-    assert verify(pk, signature, message_vec_2)
-
+""" Key generation tests """
 @pytest.mark.xfail(raises=ValueError)
-def test_scheme_3():
-    message_vec_1 = [b"hello", b"world"]
-    message_vec_2 = [b"hello", b"world", b"!"]
-    sk, pk = generate_key(message_vec_1)
-    signature = sign(sk, message_vec_1)
-    assert verify(pk, signature, message_vec_2)
-
-
-@pytest.mark.xfail(raises=ValueError)
-def test_scheme_4():
+def test_failure_generate_key_no_attr():
     message_vec = []
+    generate_key(message_vec)   
+
+""" Sign tests """
+@pytest.mark.xfail(raises=ValueError)
+def test_failure_sign_empty_message():
+    message_vec = ["hello", "world"]
     sk, pk = generate_key(message_vec)
-    signature = sign(sk, message_vec)
-    assert verify(pk, signature, message_vec)  
+    sign(sk, encode_to_bytes([]))
 
-def test_issuance_1():
-    L = 5
-    sk, pk = generate_key([b"0"] * L)
-    
-    user_attributes = AttributeMap(L)
-    user_attributes.set_attribute(0, b'0')
-    user_attributes.set_attribute(1, b'1')
-    user_attributes.set_attribute(2, b'2')
-    
-    issuer_attributes = AttributeMap(L)
-    issuer_attributes.set_attribute(3, b'3')
-    issuer_attributes.set_attribute(4, b'4')
+@pytest.mark.xfail(raises=ValueError)
+def test_failure_sign_different_message_length():
+    message_vec_1 = ["hello", "world"]
+    message_vec_2 = ["hello", "world", "!"]
+    sk, pk = generate_key(message_vec_1)
+    sign(sk, encode_to_bytes(message_vec_2))
 
-    issue_request, t = create_issue_request(pk, user_attributes)
-    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
-    signature = obtain_credential(pk, blind_signature, t)
-
-    attributes = [b'0', b'1', b'2', b'3', b'4']
-    assert verify(pk, signature, attributes)
+""" Sign and verify tests """
+def test_success_sign_verify():
+    message_vec = ["hello", "world"]
+    sk, pk = generate_key(message_vec)
+    signature = sign(sk, encode_to_bytes(message_vec))
+    assert verify(pk, signature, encode_to_bytes(message_vec))
 
 @pytest.mark.xfail(raises=AssertionError)
-def test_issuance_2():
-    L = 5
-    sk, pk = generate_key([b"0"] * L)
+def test_failure_sign_verify_different_messages():
+    message_vec_1 = ["hello", "world"]
+    message_vec_2 = ["hello", "world!"]
+    sk, pk = generate_key(message_vec_1)
+    signature = sign(sk, encode_to_bytes(message_vec_1))
+    assert verify(pk, signature, encode_to_bytes(message_vec_2))
 
-    user_attributes = AttributeMap(L)
-    user_attributes.set_attribute(0, b'hello')
-    user_attributes.set_attribute(1, b'1')
-    user_attributes.set_attribute(2, b'2')
+@pytest.mark.xfail(raises=ValueError)
+def test_failure_sign_verify_different_message_length():
+    message_vec_1 = ["hello", "world"]
+    message_vec_2 = ["hello", "world", "!"]
+    sk, pk = generate_key(message_vec_1)
+    signature = sign(sk, encode_to_bytes(message_vec_1))
+    assert verify(pk, signature, encode_to_bytes(message_vec_2))
 
-    issuer_attributes = AttributeMap(L)
-    issuer_attributes.set_attribute(3, b'3')
-    issuer_attributes.set_attribute(4, b'4')
+@pytest.mark.xfail(raises=ValueError)
+def test_failure_sign_verify_empty_message():
+    message_vec_1 = ["hello", "world"]
+    message_vec_2 = []
+    sk, pk = generate_key(message_vec_1)
+    signature = sign(sk, encode_to_bytes(message_vec_1))
+    assert verify(pk, signature, encode_to_bytes(message_vec_2))
 
+""" Issuance protocol tests """
+def test_success_issuance():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "key0", "value0"), Attribute(1, "key1", "value1"), Attribute(2, "key2", "value2")]
+    issuer_attributes = [Attribute(3, "key3", "value3"), Attribute(4, "key4", "value4")]
     issue_request, t = create_issue_request(pk, user_attributes)
     blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
-    signature = obtain_credential(pk, blind_signature, t)
+    credential = obtain_credential(pk, blind_signature, t)
+    attributes = [attr.to_bytes() for attr in user_attributes] + [attr.to_bytes() for attr in issuer_attributes]
+    assert verify(pk, credential, attributes)
 
-    attributes = [b'0', b'1', b'2', b'3', b'4']
-    assert verify(pk, signature, attributes)
+@pytest.mark.xfail(raises=AssertionError)
+def test_failure_issuance_wrong_attributes():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "key0", "value0"), Attribute(1, "key1", "value1"), Attribute(2, "key2", "value2")]
+    issuer_attributes = [Attribute(3, "key3", "value3"), Attribute(4, "key4", "value4")]
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # change one attribute in user_attributes
+    user_attributes = [Attribute(0, "key0", "CHANGE"), Attribute(1, "key1", "value1"), Attribute(2, "key2", "value2")]
+    attributes = [attr.to_bytes() for attr in user_attributes] + [attr.to_bytes() for attr in issuer_attributes]
+    assert verify(pk, credential, attributes)
 
+@pytest.mark.xfail(raises=ZKPVerificationError)
+def test_failure_issuance_wrong_zkp():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "key0", "value0"), Attribute(1, "key1", "value1"), Attribute(2, "key2", "value2")]
+    issuer_attributes = [Attribute(3, "key3", "value3"), Attribute(4, "key4", "value4")]
+    issue_request, t = create_issue_request(pk, user_attributes)
+    # change pi
+    issue_request.pi.generators.append(G1.generator() ** G1.order().random())
+    issue_request.pi.s.append(G1.order().random())
+    sign_issue_request(sk, pk, issue_request, issuer_attributes)
+
+""" Showing protocol tests """    
+def test_success_disclosure_proof_1():
+    """ hidden_attributes = user_attributes, disclosed_attributes = issuer_attributes"""
+    sk, pk = generate_key(["key"] * 2)
+    user_attributes = [Attribute(0, "secret_key", "value0")]
+    issuer_attributes = [Attribute(1, "rest", "true")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = user_attributes
+    disclosed_attributes = issuer_attributes
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes)
+                    
+def test_success_disclosure_proof_2():
+    """ hidden_attributes = user_attributes, disclosed_attributes = []"""
+    sk, pk = generate_key(["key"] * 2)
+    user_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    issuer_attributes = []
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = user_attributes
+    disclosed_attributes = []
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes)              
+
+def test_success_disclosure_proof_3():
+    """ hidden_attributes = [], disclosed_attributes = issuer_attributes"""
+    sk, pk = generate_key(["key"] * 2)
+    user_attributes = []
+    issuer_attributes = [Attribute(0, "key0", "value0"), Attribute(1, "key1", "value1")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = []
+    disclosed_attributes = issuer_attributes
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes)
+    
+def test_success_disclosure_proof_custom_disclosure_1():
+    sk, pk = generate_key(["key"] * 3)
+    user_attributes = [Attribute(0, "username", "value0")]
+    issuer_attributes = [Attribute(1, "rest", "true"), Attribute(2, "dojo", "true")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = [Attribute(0, "username", "value0"), Attribute(1, "rest", "true")]
+    disclosed_attributes = [Attribute(2, "dojo", "true")]
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes)
+
+def test_success_disclosure_proof_custom_disclosure_2():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    issuer_attributes = [Attribute(2, "rest", "true"), Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1"), Attribute(2, "rest", "true")]
+    disclosed_attributes = [Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes)      
+
+def test_success_disclosure_proof_custom_disclosure_3():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    issuer_attributes = [Attribute(2, "rest", "true"), Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1"), Attribute(2, "rest", "true"), Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    disclosed_attributes = []
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes) 
+
+def test_success_disclosure_proof_custom_disclosure_4():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    issuer_attributes = [Attribute(2, "rest", "true"), Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = []
+    disclosed_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1"), Attribute(2, "rest", "true"), Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes) 
+
+@pytest.mark.xfail(raises=AssertionError)
+def test_failure_disclosure_proof_different_message():
+    sk, pk = generate_key(["key"] * 5)
+    user_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    issuer_attributes = [Attribute(2, "rest", "true"), Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1"), Attribute(2, "rest", "true")]
+    disclosed_attributes = [Attribute(3, "dojo", "true"), Attribute(4, "bar", "false")]
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello ATOPET!", disclosed_attributes) 
+
+@pytest.mark.xfail(raises=AssertionError)
+def test_failure_disclosure_proof_different_attribute():
+    sk, pk = generate_key(["key"] * 3)
+    user_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    issuer_attributes = [Attribute(2, "rest", "false")]
+    # issuance protocol
+    issue_request, t = create_issue_request(pk, user_attributes)
+    blind_signature = sign_issue_request(sk, pk, issue_request, issuer_attributes)
+    credential = obtain_credential(pk, blind_signature, t)
+    # showing protocol
+    anonymous_credential = credential.anonymize()
+    hidden_attributes = [Attribute(0, "secret_key", "value0"), Attribute(1, "username", "value1")]
+    # change false to true
+    disclosed_attributes = [Attribute(2, "rest", "true")]
+    disclosure_proof = create_disclosure_proof(pk, anonymous_credential, hidden_attributes, b"hello world")
+    assert verify_disclosure_proof(pk, disclosure_proof, b"hello world", disclosed_attributes)  
