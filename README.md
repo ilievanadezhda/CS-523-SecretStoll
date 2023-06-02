@@ -3,7 +3,8 @@
 ## Introduction
 
 In this project, we developed a location-based application, SecretStroll,
-that enables users to search for nearby points of interest (POI).
+that enables users to search for nearby points of interest (POI). ABCs are used
+for authentication of the registered users.
 
 ## Files in this repository
 
@@ -29,10 +30,10 @@ This repository contains the skeleton code for Parts 1 and 3:
 * `evaluation_stroll.py`—Test for evaluation of the performance of the ABCs.
 * `test_*`-Files containing unit tests for the respective implementation files.
 * `zkp_utils.py`-Contains implementation of the zero knowledge proofs.
-* `capture.sh`-Shell script for capturing the request traces used for feature extraction.
-* `feature_extraction.ipynb`-Contains the feature extraction code and writes the extracted feature to file.
-The generated file is later used in `fingerprinting.py`.
-* `privacy_evaluation.ipynb`-Contains the deanonymization attack and defence code.
+* `part_3/capture.sh`-Shell script for capturing the request traces used for feature extraction.
+* `part_3/feature_extraction.ipynb`-Contains the feature extraction code and writes the extracted feature to file.
+The generated file is named `features.csv` and is later used in `fingerprinting.py`.
+* `privacy_evaluation/privacy_evaluation.ipynb`-Contains the deanonymization attack and defence code.
 
 ## Server and client deployment
 
